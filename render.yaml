@@ -1,6 +1,6 @@
 services:
   - type: worker
-    name: clean-telegram-bot
+    name: maxxpharm-telegram-bot
     env: python
     plan: free
     buildCommand: "echo 'No dependencies needed - pure Python'"
