@@ -4,7 +4,7 @@ services:
     env: python
     plan: free
     buildCommand: "echo 'No dependencies needed - pure Python'"
-    startCommand: "python complete_bot.py"
+    startCommand: "python exact_menu_bot.py"
     envVars:
       - key: BOT_TOKEN
         sync: false

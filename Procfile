@@ -1,1 +1,1 @@
-worker: python complete_bot.py
+worker: python exact_menu_bot.py
