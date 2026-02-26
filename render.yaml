@@ -3,8 +3,8 @@ services:
     name: clean-telegram-bot
     env: python
     plan: free
-    buildCommand: "pip install -r requirements.txt"
-    startCommand: "python bot.py"
+    buildCommand: "echo 'No dependencies needed'"
+    startCommand: "python minimal_bot.py"
     envVars:
       - key: BOT_TOKEN
         sync: false
