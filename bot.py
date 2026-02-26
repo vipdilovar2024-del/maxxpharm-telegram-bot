@@ -1,17 +1,13 @@
 #!/usr/bin/env python3
 """
-CLEAN TELEGRAM BOT - новый бот с нуля
+CLEAN TELEGRAM BOT - новый бот с нуля (aiogram 2.25.1)
 """
 import asyncio
 import logging
 import os
 
-from aiogram import Bot, Dispatcher, Router, F
-from aiogram.client.default import DefaultBotProperties
-from aiogram.enums import ParseMode
-from aiogram.fsm.storage.memory import MemoryStorage
-from aiogram.types import Message, InlineKeyboardMarkup, InlineKeyboardButton
-from aiogram.filters import Command
+from aiogram import Bot, Dispatcher, executor, types
+from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
 
 # Настройка логирования
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
@@ -23,11 +19,12 @@ if not BOT_TOKEN:
     logger.error("BOT_TOKEN не найден!")
     exit(1)
 
-# Создаем роутер
-router = Router()
+# Создаем бота и диспетчер
+bot = Bot(token=BOT_TOKEN)
+dp = Dispatcher(bot)
 
-@router.message(Command("start"))
-async def cmd_start(message: Message):
+@dp.message_handler(commands=['start'])
+async def cmd_start(message: types.Message):
     """Обработчик команды /start"""
     telegram_id = str(message.from_user.id)
     logger.info(f"CLEAN BOT: Получен /start от {telegram_id}")
@@ -37,13 +34,12 @@ async def cmd_start(message: Message):
         logger.info(f"CLEAN BOT: Доступ разрешен для {telegram_id}")
         
         # Создаем клавиатуру
-        keyboard = InlineKeyboardMarkup(inline_keyboard=[
-            [InlineKeyboardButton(text="👥 Управление пользователями", callback_data="users")],
-            [InlineKeyboardButton(text="📦 Управление заказами", callback_data="orders")],
-            [InlineKeyboardButton(text="📊 Отчеты", callback_data="reports")],
-            [InlineKeyboardButton(text="⚙️ Настройки", callback_data="settings")],
-            [InlineKeyboardButton(text="🔙 Главное меню", callback_data="main")]
-        ])
+        keyboard = InlineKeyboardMarkup()
+        keyboard.add(InlineKeyboardButton(text="👥 Управление пользователями", callback_data="users"))
+        keyboard.add(InlineKeyboardButton(text="📦 Управление заказами", callback_data="orders"))
+        keyboard.add(InlineKeyboardButton(text="📊 Отчеты", callback_data="reports"))
+        keyboard.add(InlineKeyboardButton(text="⚙️ Настройки", callback_data="settings"))
+        keyboard.add(InlineKeyboardButton(text="🔙 Главное меню", callback_data="main"))
         
         await message.answer(
             "👋 Добро пожаловать, VIP Dilovar!\n\n"
@@ -63,12 +59,12 @@ async def cmd_start(message: Message):
         "Свяжитесь с администратором для получения доступа."
     )
 
-@router.callback_query(F.data)
-async def handle_callbacks(callback: F.CallbackQuery):
+@dp.callback_query_handler(lambda call: True)
+async def handle_callbacks(call: types.CallbackQuery):
     """Обработчик кнопок"""
-    logger.info(f"CLEAN BOT: Нажата кнопка: {callback.data}")
-    await callback.answer(f"Выбрано: {callback.data}")
-    await callback.message.answer(f"Вы выбрали: {callback.data}")
+    logger.info(f"CLEAN BOT: Нажата кнопка: {call.data}")
+    await bot.answer_callback_query(call.id, text=f"Выбрано: {call.data}")
+    await bot.send_message(call.message.chat.id, f"Вы выбрали: {call.data}")
 
 async def main():
     """Главная функция"""
@@ -76,38 +72,18 @@ async def main():
     logger.info("CLEAN TELEGRAM BOT ЗАПУСКАЕТСЯ...")
     logger.info("=" * 50)
     
-    # Инициализация бота
-    bot = Bot(
-        token=BOT_TOKEN,
-        default=DefaultBotProperties(parse_mode=ParseMode.HTML)
-    )
-    
-    # Инициализация диспетчера
-    dp = Dispatcher(storage=MemoryStorage())
-    dp.include_router(router)
-    
     # Установка команд
-    from aiogram.types import BotCommand
-    commands = [
-        BotCommand(command="start", description="Запустить бота"),
-    ]
-    await bot.set_my_commands(commands)
+    await bot.set_my_commands([
+        types.BotCommand(command="start", description="Запустить бота"),
+    ])
     
     logger.info("CLEAN BOT: Бот успешно запущен")
-    
+
+if __name__ == "__main__":
     try:
-        await dp.start_polling(bot)
+        main()
+        executor.start_polling(dp, skip_updates=True)
     except KeyboardInterrupt:
         logger.info("CLEAN BOT: Бот остановлен")
     except Exception as e:
         logger.error(f"CLEAN BOT: Ошибка бота: {e}")
-    finally:
-        await bot.session.close()
-
-if __name__ == "__main__":
-    try:
-        asyncio.run(main())
-    except KeyboardInterrupt:
-        print("CLEAN BOT: Бот остановлен")
-    except Exception as e:
-        print(f"CLEAN BOT: Ошибка запуска: {e}")
