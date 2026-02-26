@@ -9,4 +9,7 @@ services:
       - key: BOT_TOKEN
         sync: false
       - key: PYTHON_VERSION
-        value: 3.11
+        value: "3.11"
+      - key: PYTHONUNBUFFERED
+        value: "1"
+    runtime: "python-3.11"
