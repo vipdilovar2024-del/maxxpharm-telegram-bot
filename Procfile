@@ -1,1 +1,1 @@
-web: python run_render_bot.py
+web: python start_render.py
