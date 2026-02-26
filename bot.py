@@ -79,7 +79,7 @@ async def main():
     # Инициализация бота
     bot = Bot(
         token=BOT_TOKEN,
-        default=DefaultBotProperties(parse_mode=ParseMode.MARKDOWN)
+        default=DefaultBotProperties(parse_mode=ParseMode.HTML)
     )
     
     # Инициализация диспетчера
