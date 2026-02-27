@@ -133,8 +133,7 @@ async def main():
         bot = Bot(
             token=settings.BOT_TOKEN,
             default=DefaultBotProperties(
-                parse_mode=ParseMode.HTML,
-                disable_web_page_preview=True
+                parse_mode=ParseMode.HTML
             )
         )
         
