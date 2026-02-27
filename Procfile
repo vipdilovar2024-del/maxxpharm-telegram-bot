@@ -1,1 +1,1 @@
-web: python final_bot.py
+web: python simple_start.py
