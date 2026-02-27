@@ -1,1 +1,1 @@
-web: python debug_start.py
+web: python working_bot.py
