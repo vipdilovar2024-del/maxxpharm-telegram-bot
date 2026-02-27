@@ -1,1 +1,1 @@
-web: python run_both.py
+web: python debug_start.py

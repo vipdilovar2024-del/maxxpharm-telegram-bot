@@ -5,7 +5,7 @@ services:
     env: python
     plan: free
     buildCommand: pip install -r requirements.txt
-    startCommand: python run_both.py
+    startCommand: python debug_start.py
     autoDeploy: true
     healthCheckPath: /health
     
@@ -18,7 +18,7 @@ services:
       - key: DATABASE_URL
         value: postgresql+asyncpg://solimfarm_db_steg_user:B4a9T78li3OZlOfVu3f6bF9iBfLWJfu9@dpg-d6ane6cr85hc73ep4qd0-a.oregon-postgres.render.com/solimfarm_db_steg
       - key: DEBUG
-        value: "False"
+        value: "True"
       - key: LOG_LEVEL
         value: "INFO"
       - key: RENDER
