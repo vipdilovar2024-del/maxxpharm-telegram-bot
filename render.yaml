@@ -5,7 +5,7 @@ services:
     env: python
     plan: free
     buildCommand: pip install -r requirements.txt
-    startCommand: python start_with_health.py
+    startCommand: python run_both.py
     autoDeploy: true
     healthCheckPath: /health
     

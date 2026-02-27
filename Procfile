@@ -1,1 +1,1 @@
-web: python start_with_health.py
+web: python run_both.py
