@@ -1,1 +1,1 @@
-web: python app.py
+web: python clean_bot.py

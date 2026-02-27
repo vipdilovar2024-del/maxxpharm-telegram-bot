@@ -1,11 +1,11 @@
 services:
-  # Web Service for the Telegram Bot
+  # Web Service for Telegram Bot
   - type: web
     name: maxxpharm-telegram-bot
     env: python
     plan: free
     buildCommand: pip install -r requirements.txt
-    startCommand: python app.py
+    startCommand: python clean_bot.py
     autoDeploy: true
     healthCheckPath: /health
     
