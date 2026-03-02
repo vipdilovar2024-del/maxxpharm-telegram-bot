@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Full Bot - Complete MAXXPHARM Telegram Bot
+Full Bot - Working MAXXPHARM Telegram Bot with Menu
 """
 
 import asyncio
@@ -13,9 +13,6 @@ from aiogram.types import (
     ReplyKeyboardMarkup, KeyboardButton,
     InlineKeyboardMarkup, InlineKeyboardButton
 )
-from aiogram.fsm.context import FSMContext
-from aiogram.fsm.state import State, StatesGroup
-from aiogram.fsm.storage.memory import MemoryStorage
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -23,13 +20,7 @@ logger = logging.getLogger(__name__)
 BOT_TOKEN = "8357898408:AAEA5TBDYO9cf9tjbCu6ZcrvPQxy9j28KGI"
 ADMIN_ID = 697780123
 
-# FSM States
-class OrderStates(StatesGroup):
-    browsing = State()
-    in_cart = State()
-    checkout = State()
-
-# Database simulation (temporary)
+# Database
 USERS = {}
 PRODUCTS = [
     {"id": 1, "name": "Парацетамол", "price": 50, "category": "Обезболивающие", "stock": 100},
@@ -40,12 +31,10 @@ PRODUCTS = [
 ]
 
 CATEGORIES = ["Обезболивающие", "Витамины", "Антибиотики", "Противовирусные"]
-
 ORDERS = []
 
 # Keyboards
 def get_main_menu(is_admin=False):
-    """Главное меню клиента"""
     if is_admin:
         keyboard = ReplyKeyboardMarkup(
             keyboard=[
@@ -69,7 +58,6 @@ def get_main_menu(is_admin=False):
     return keyboard
 
 def get_categories_keyboard():
-    """Клавиатура категорий"""
     keyboard = InlineKeyboardMarkup(inline_keyboard=[])
     for category in CATEGORIES:
         keyboard.inline_keyboard.append([
@@ -81,7 +69,6 @@ def get_categories_keyboard():
     return keyboard
 
 def get_products_keyboard(category=None):
-    """Клавиатура товаров"""
     keyboard = InlineKeyboardMarkup(inline_keyboard=[])
     
     if category:
@@ -103,7 +90,6 @@ def get_products_keyboard(category=None):
     return keyboard
 
 def get_product_actions_keyboard(product_id):
-    """Действия с товаром"""
     keyboard = InlineKeyboardMarkup(inline_keyboard=[
         [
             InlineKeyboardButton(text="➕ В корзину", callback_data=f"add_to_cart_{product_id}"),
@@ -117,39 +103,26 @@ def get_product_actions_keyboard(product_id):
 
 # Create bot and dispatcher
 bot = Bot(token=BOT_TOKEN, default=DefaultBotProperties(parse_mode=ParseMode.HTML))
-dp = Dispatcher(storage=MemoryStorage())
+dp = Dispatcher()
 
 # User management
-def get_user_role(user_id):
-    """Определение роли пользователя"""
-    if user_id == ADMIN_ID:
-        return "SUPER_ADMIN"
-    return "CLIENT"
-
 def is_admin(user_id):
-    """Проверка админских прав"""
     return user_id == ADMIN_ID
 
 # Handlers
 @dp.message(Command("start"))
-async def cmd_start(message: types.Message, state: FSMContext):
-    """Обработка команды /start"""
+async def cmd_start(message: types.Message):
     user_id = message.from_user.id
-    user_role = get_user_role(user_id)
+    admin = is_admin(user_id)
     
-    # Save user
     USERS[user_id] = {
         "id": user_id,
         "full_name": message.from_user.full_name,
-        "role": user_role,
         "cart": [],
         "orders": []
     }
     
-    # Reset state
-    await state.clear()
-    
-    if is_admin(user_id):
+    if admin:
         await message.answer(
             f"👑 <b>Добро пожаловать, {message.from_user.full_name}!</b>\n\n"
             "🚀 <b>MAXXPHARM Admin Panel</b>\n\n"
@@ -168,14 +141,13 @@ async def cmd_start(message: types.Message, state: FSMContext):
             reply_markup=get_main_menu(is_admin=False)
         )
     
-    logger.info(f"User {user_id} ({user_role}) started bot")
+    logger.info(f"User {user_id} started bot (admin: {admin})")
 
 @dp.message(Command("help"))
 async def cmd_help(message: types.Message):
-    """Обработка команды /help"""
-    user_role = get_user_role(message.from_user.id)
+    admin = is_admin(message.from_user.id)
     
-    if is_admin(message.from_user.id):
+    if admin:
         help_text = (
             "🆘 <b>Помощь MAXXPHARM Admin</b>\n\n"
             "📋 <b>Админ команды:</b>\n"
@@ -211,11 +183,10 @@ async def cmd_help(message: types.Message):
             "✅ Всегда готовы помочь!"
         )
     
-    await message.answer(help_text, reply_markup=get_main_menu(is_admin(message.from_user.id)))
+    await message.answer(help_text, reply_markup=get_main_menu(admin))
 
 @dp.message(Command("stats"))
 async def cmd_stats(message: types.Message):
-    """Быстрая статистика (только для админа)"""
     if not is_admin(message.from_user.id):
         await message.answer("❌ У вас нет прав для этой команды!")
         return
@@ -234,11 +205,9 @@ async def cmd_stats(message: types.Message):
     
     await message.answer(stats_text, reply_markup=get_main_menu(is_admin=True))
 
+# Client menu handlers
 @dp.message(F.text == "🛍 Каталог")
-async def cmd_catalog(message: types.Message, state: FSMContext):
-    """Открытие каталога"""
-    await state.set_state(OrderStates.browsing)
-    
+async def cmd_catalog(message: types.Message):
     await message.answer(
         "🛍 <b>Каталог товаров</b>\n\n"
         "🏷 Выберите категорию:",
@@ -247,7 +216,6 @@ async def cmd_catalog(message: types.Message, state: FSMContext):
 
 @dp.message(F.text == "🛒 Корзина")
 async def cmd_cart(message: types.Message):
-    """Просмотр корзины"""
     user_id = message.from_user.id
     user_data = USERS.get(user_id, {})
     cart = user_data.get("cart", [])
@@ -288,7 +256,6 @@ async def cmd_cart(message: types.Message):
 
 @dp.message(F.text == "📦 Мои заказы")
 async def cmd_my_orders(message: types.Message):
-    """Просмотр заказов пользователя"""
     user_id = message.from_user.id
     user_data = USERS.get(user_id, {})
     user_orders = user_data.get("orders", [])
@@ -313,7 +280,6 @@ async def cmd_my_orders(message: types.Message):
 
 @dp.message(F.text == "📞 Поддержка")
 async def cmd_support(message: types.Message):
-    """Поддержка"""
     support_text = (
         "📞 <b>Поддержка MAXXPHARM</b>\n\n"
         "👥 Наши специалисты готовы помочь!\n\n"
@@ -327,10 +293,19 @@ async def cmd_support(message: types.Message):
     
     await message.answer(support_text, reply_markup=get_main_menu(is_admin=False))
 
-# Admin handlers
+@dp.message(F.text == "🔍 Поиск")
+async def cmd_search(message: types.Message):
+    await message.answer(
+        "🔍 <b>Поиск товаров</b>\n\n"
+        "🔧 Функция поиска в разработке\n\n"
+        "📝 Введите название товара для поиска\n\n"
+        "✅ Скоро будет доступна!",
+        reply_markup=get_main_menu(is_admin=False)
+    )
+
+# Admin menu handlers
 @dp.message(F.text == "📊 Статистика")
 async def admin_stats(message: types.Message):
-    """Статистика для админа"""
     if not is_admin(message.from_user.id):
         await message.answer("❌ Доступ запрещен!")
         return
@@ -338,8 +313,8 @@ async def admin_stats(message: types.Message):
     stats_text = (
         "📊 <b>Статистика MAXXPHARM</b>\n\n"
         f"👥 Всего пользователей: {len(USERS)}\n"
-        f"🛍 Клиентов: {len([u for u in USERS.values() if u['role'] == 'CLIENT'])}\n"
-        f"👑 Админов: {len([u for u in USERS.values() if u['role'] == 'SUPER_ADMIN'])}\n\n"
+        f"🛍 Клиентов: {len([u for u in USERS.values() if not is_admin(u['id'])])}\n"
+        f"👑 Админов: {len([u for u in USERS.values() if is_admin(u['id'])])}\n\n"
         f"📦 Всего товаров: {len(PRODUCTS)}\n"
         f"🏷 Категорий: {len(CATEGORIES)}\n\n"
         f"🛒 Всего заказов: {len(ORDERS)}\n"
@@ -354,7 +329,6 @@ async def admin_stats(message: types.Message):
 
 @dp.message(F.text == "📦 Заказы")
 async def admin_orders(message: types.Message):
-    """Управление заказами"""
     if not is_admin(message.from_user.id):
         await message.answer("❌ Доступ запрещен!")
         return
@@ -381,7 +355,6 @@ async def admin_orders(message: types.Message):
 
 @dp.message(F.text == "👥 Пользователи")
 async def admin_users(message: types.Message):
-    """Управление пользователями"""
     if not is_admin(message.from_user.id):
         await message.answer("❌ Доступ запрещен!")
         return
@@ -391,14 +364,13 @@ async def admin_users(message: types.Message):
     for user_id, user_data in USERS.items():
         users_text += f"👤 {user_data['full_name']}\n"
         users_text += f"🆔 ID: {user_id}\n"
-        users_text += f"🔑 Роль: {user_data['role']}\n"
+        users_text += f"🔑 Роль: {'Admin' if is_admin(user_id) else 'Client'}\n"
         users_text += f"📦 Заказов: {len(user_data.get('orders', []))}\n\n"
     
     await message.answer(users_text, reply_markup=get_main_menu(is_admin=True))
 
 @dp.message(F.text == "🧾 Товары")
 async def admin_products(message: types.Message):
-    """Управление товарами"""
     if not is_admin(message.from_user.id):
         await message.answer("❌ Доступ запрещен!")
         return
@@ -415,17 +387,30 @@ async def admin_products(message: types.Message):
 
 @dp.message(F.text == "🚀 Выход")
 async def admin_logout(message: types.Message):
-    """Выход из админ-панели"""
     await message.answer(
         "🚀 <b>Выход из админ-панели</b>\n\n"
         "👤 Вы вернулись в режим клиента",
         reply_markup=get_main_menu(is_admin=False)
     )
 
+# Other admin handlers
+@dp.message(F.text.in_(["🏷 Категории", "🏪 Склад", "⚙ Настройки", "📝 Логи"]))
+async def admin_other(message: types.Message):
+    if not is_admin(message.from_user.id):
+        await message.answer("❌ Доступ запрещен!")
+        return
+    
+    feature = message.text
+    await message.answer(
+        f"⚠️ <b>{feature}</b>\n\n"
+        "🔧 Функция в разработке\n\n"
+        "✅ Скоро будет доступна!",
+        reply_markup=get_main_menu(is_admin=True)
+    )
+
 # Callback handlers
 @dp.callback_query(F.data.startswith("category_"))
 async def callback_category(callback: types.CallbackQuery):
-    """Выбор категории"""
     category = callback.data.replace("category_", "")
     
     await callback.message.edit_text(
@@ -437,7 +422,6 @@ async def callback_category(callback: types.CallbackQuery):
 
 @dp.callback_query(F.data.startswith("product_"))
 async def callback_product(callback: types.CallbackQuery):
-    """Выбор товара"""
     product_id = int(callback.data.replace("product_", ""))
     product = next((p for p in PRODUCTS if p["id"] == product_id), None)
     
@@ -450,7 +434,7 @@ async def callback_product(callback: types.CallbackQuery):
         f"💰 Цена: {product['price']}₽\n"
         f"📊 Остаток: {product['stock']} шт\n"
         f"🏷 Категория: {product['category']}\n\n"
-        f"📝 {product.get('description', 'Качественный фармацевтический продукт')}"
+        f"📝 Качественный фармацевтический продукт"
     )
     
     await callback.message.edit_text(
@@ -461,14 +445,12 @@ async def callback_product(callback: types.CallbackQuery):
 
 @dp.callback_query(F.data.startswith("add_to_cart_"))
 async def callback_add_to_cart(callback: types.CallbackQuery):
-    """Добавление товара в корзину"""
     product_id = int(callback.data.replace("add_to_cart_", ""))
     user_id = callback.from_user.id
     
     user_data = USERS.get(user_id, {})
     cart = user_data.get("cart", [])
     
-    # Check if product already in cart
     existing_item = next((item for item in cart if item["id"] == product_id), None)
     if existing_item:
         existing_item["quantity"] += 1
@@ -484,7 +466,6 @@ async def callback_add_to_cart(callback: types.CallbackQuery):
 
 @dp.callback_query(F.data == "clear_cart")
 async def callback_clear_cart(callback: types.CallbackQuery):
-    """Очистка корзины"""
     user_id = callback.from_user.id
     user_data = USERS.get(user_id, {})
     user_data["cart"] = []
@@ -499,7 +480,6 @@ async def callback_clear_cart(callback: types.CallbackQuery):
 
 @dp.callback_query(F.data == "checkout")
 async def callback_checkout(callback: types.CallbackQuery):
-    """Оформление заказа"""
     user_id = callback.from_user.id
     user_data = USERS.get(user_id, {})
     cart = user_data.get("cart", [])
@@ -508,25 +488,18 @@ async def callback_checkout(callback: types.CallbackQuery):
         await callback.answer("❌ Корзина пуста!")
         return
     
-    # Calculate total
     total = 0
-    order_items = []
     
     for item in cart:
         product = next((p for p in PRODUCTS if p["id"] == item["id"]), None)
         if product:
             total += product['price'] * item['quantity']
-            order_items.append({
-                "product": product,
-                "quantity": item['quantity']
-            })
     
-    # Create order
     order_id = len(ORDERS) + 1
     order = {
         "id": order_id,
         "user_id": user_id,
-        "items": order_items,
+        "items": cart.copy(),
         "total": total,
         "status": "NEW",
         "date": "Сегодня"
@@ -534,12 +507,10 @@ async def callback_checkout(callback: types.CallbackQuery):
     
     ORDERS.append(order)
     
-    # Add to user orders
     user_orders = user_data.get("orders", [])
     user_orders.append(order)
     user_data["orders"] = user_orders
     
-    # Clear cart
     user_data["cart"] = []
     USERS[user_id] = user_data
     
@@ -560,7 +531,6 @@ async def callback_checkout(callback: types.CallbackQuery):
 
 @dp.callback_query(F.data == "back_to_main")
 async def callback_back_to_main(callback: types.CallbackQuery):
-    """Возврат в главное меню"""
     is_admin_user = is_admin(callback.from_user.id)
     
     await callback.message.edit_text(
@@ -572,7 +542,6 @@ async def callback_back_to_main(callback: types.CallbackQuery):
 
 @dp.callback_query(F.data == "back_to_categories")
 async def callback_back_to_categories(callback: types.CallbackQuery):
-    """Возврат к категориям"""
     await callback.message.edit_text(
         "🛍 <b>Каталог товаров</b>\n\n"
         "🏷 Выберите категорию:",
@@ -582,7 +551,6 @@ async def callback_back_to_categories(callback: types.CallbackQuery):
 
 @dp.callback_query(F.data == "back_to_products")
 async def callback_back_to_products(callback: types.CallbackQuery):
-    """Возврат к товарам"""
     await callback.message.edit_text(
         "📦 <b>Все товары</b>\n\n"
         "Выберите товар:",
@@ -590,24 +558,35 @@ async def callback_back_to_products(callback: types.CallbackQuery):
     )
     await callback.answer()
 
-# Other admin handlers (simplified)
-@dp.message(F.text.in_(["🏷 Категории", "🏪 Склад", "⚙ Настройки", "📝 Логи"]))
-async def admin_other(message: types.Message):
-    """Другие админ функции"""
-    if not is_admin(message.from_user.id):
-        await message.answer("❌ Доступ запрещен!")
+@dp.callback_query(F.data.startswith("product_info_"))
+async def callback_product_info(callback: types.CallbackQuery):
+    product_id = int(callback.data.replace("product_info_", ""))
+    product = next((p for p in PRODUCTS if p["id"] == product_id), None)
+    
+    if not product:
+        await callback.answer("❌ Товар не найден!")
         return
     
-    feature = message.text
-    await message.answer(
-        f"⚠️ <b>{feature}</b>\n\n"
-        "🔧 Функция в разработке\n\n"
-        "✅ Скоро будет доступна!",
-        reply_markup=get_main_menu(is_admin=True)
+    info_text = (
+        f"ℹ️ <b>Информация о товаре</b>\n\n"
+        f"📦 <b>{product['name']}</b>\n\n"
+        f"💰 <b>Цена:</b> {product['price']}₽\n"
+        f"📊 <b>Остаток:</b> {product['stock']} шт\n"
+        f"🏷 <b>Категория:</b> {product['category']}\n\n"
+        f"� <b>Описание:</b>\n"
+        f"Качественный фармацевтический продукт\n"
+        f"производства высшего качества.\n\n"
+        f"✅ <b>Сертифицировано</b>\n"
+        f"🏆 <b>Гарантия качества</b>"
     )
+    
+    await callback.message.edit_text(
+        info_text,
+        reply_markup=get_product_actions_keyboard(product_id)
+    )
+    await callback.answer()
 
 async def main():
-    """Main function"""
     logger.info("🚀 Starting MAXXPHARM Full Bot")
     
     # Delete webhook
@@ -623,4 +602,12 @@ async def main():
     await dp.start_polling(bot)
 
 if __name__ == "__main__":
-    asyncio.run(main())
+    try:
+        logger.info("🎯 RUNNING MAXXPHARM BOT")
+        asyncio.run(main())
+    except KeyboardInterrupt:
+        logger.info("🛑 Bot stopped by user")
+    except Exception as e:
+        logger.error(f"❌ FATAL ERROR: {e}")
+        import traceback
+        traceback.print_exc()
