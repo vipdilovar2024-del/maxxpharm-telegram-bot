@@ -5,8 +5,8 @@ services:
     env: python
     plan: free
     buildCommand: pip install -r requirements.txt
-    startCommand: bot.py
-    healthCheckPath: /simple.py
+    startCommand: simple_start.py
+    healthCheckPath: /
     autoDeploy: true
     envVars:
       - key: BOT_TOKEN
