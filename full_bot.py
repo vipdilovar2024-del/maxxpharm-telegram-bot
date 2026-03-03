@@ -469,7 +469,19 @@ async def admin_users(message: types.Message):
         users_text += f"🔑 Роль: {role_name}\n"
         users_text += f"📦 Заказов: {len(user_data.get('orders', []))}\n\n"
     
-    await message.answer(users_text, reply_markup=get_main_menu(message.from_user.id))
+    # Добавляем кнопки управления
+    keyboard = InlineKeyboardMarkup(inline_keyboard=[
+        [
+            InlineKeyboardButton(text="➕ Добавить пользователя", callback_data="add_user_start"),
+            InlineKeyboardButton(text="🔧 Изменить роль", callback_data="change_role_start")
+        ],
+        [
+            InlineKeyboardButton(text="🗑️ Удалить пользователя", callback_data="delete_user_start"),
+            InlineKeyboardButton(text="🔙 Назад", callback_data="back_to_main")
+        ]
+    ])
+    
+    await message.answer(users_text, reply_markup=keyboard)
 
 @dp.message(F.text == "🧾 Товары")
 async def admin_products(message: types.Message):
@@ -700,6 +712,257 @@ async def callback_product_info(callback: types.CallbackQuery):
         reply_markup=get_product_actions_keyboard(product_id)
     )
     await callback.answer()
+
+# 🎯 УПРАВЛЕНИЕ ПОЛЬЗОВАТЕЛЯМИ
+@dp.callback_query(F.data == "add_user_start")
+async def callback_add_user_start(callback: types.CallbackQuery):
+    if not is_admin(callback.from_user.id):
+        await callback.answer("❌ Доступ запрещен!")
+        return
+    
+    await callback.message.edit_text(
+        "➕ <b>Добавление пользователя</b>\n\n"
+        "📝 <b>Инструкция:</b>\n\n"
+        "1️⃣ Попросите пользователя отправить команду /start\n"
+        "2️⃣ Узнайте его Telegram ID\n"
+        "3️⃣ Отправьте его ID в этот чат\n\n"
+        "💬 <b>Формат:</b>\n"
+        "Просто отправьте ID пользователя\n\n"
+        "🔍 <b>Как узнать ID:</b>\n"
+        "• @userinfobot - отправьте ему /start\n"
+        "• @getmyid_bot - отправьте ему /start\n\n"
+        "📤 Отправьте ID пользователя для добавления:",
+        reply_markup=InlineKeyboardMarkup(inline_keyboard=[
+            [InlineKeyboardButton(text="🔙 Назад", callback_data="back_to_users")]
+        ])
+    )
+    await callback.answer()
+
+@dp.callback_query(F.data == "change_role_start")
+async def callback_change_role_start(callback: types.CallbackQuery):
+    if not is_admin(callback.from_user.id):
+        await callback.answer("❌ Доступ запрещен!")
+        return
+    
+    await callback.message.edit_text(
+        "🔧 <b>Изменение роли пользователя</b>\n\n"
+        "📤 Отправьте ID пользователя для изменения роли:",
+        reply_markup=InlineKeyboardMarkup(inline_keyboard=[
+            [InlineKeyboardButton(text="🔙 Назад", callback_data="back_to_users")]
+        ])
+    )
+    await callback.answer()
+
+@dp.callback_query(F.data == "delete_user_start")
+async def callback_delete_user_start(callback: types.CallbackQuery):
+    if not is_admin(callback.from_user.id):
+        await callback.answer("❌ Доступ запрещен!")
+        return
+    
+    await callback.message.edit_text(
+        "🗑️ <b>Удаление пользователя</b>\n\n"
+        "⚠️ <b>Внимание!</b>\n"
+        "Это действие удалит все данные пользователя\n\n"
+        "📤 Отправьте ID пользователя для удаления:",
+        reply_markup=InlineKeyboardMarkup(inline_keyboard=[
+            [InlineKeyboardButton(text="🔙 Назад", callback_data="back_to_users")]
+        ])
+    )
+    await callback.answer()
+
+@dp.callback_query(F.data == "back_to_users")
+async def callback_back_to_users(callback: types.CallbackQuery):
+    # Возвращаемся к списку пользователей
+    users_text = "👥 <b>Все пользователи:</b>\n\n"
+    
+    for user_id, user_data in USERS.items():
+        role_name = {
+            UserRole.SUPER_ADMIN: "Super Admin",
+            UserRole.ADMIN: "Admin", 
+            UserRole.MANAGER: "Manager",
+            UserRole.COURIER: "Courier",
+            UserRole.CLIENT: "Client"
+        }.get(user_data.get('role', UserRole.CLIENT), "Unknown")
+        
+        users_text += f"👤 {user_data['full_name']}\n"
+        users_text += f"🆔 ID: {user_id}\n"
+        users_text += f"🔑 Роль: {role_name}\n"
+        users_text += f"📦 Заказов: {len(user_data.get('orders', []))}\n\n"
+    
+    keyboard = InlineKeyboardMarkup(inline_keyboard=[
+        [
+            InlineKeyboardButton(text="➕ Добавить пользователя", callback_data="add_user_start"),
+            InlineKeyboardButton(text="🔧 Изменить роль", callback_data="change_role_start")
+        ],
+        [
+            InlineKeyboardButton(text="🗑️ Удалить пользователь", callback_data="delete_user_start"),
+            InlineKeyboardButton(text="🔙 Назад", callback_data="back_to_main")
+        ]
+    ])
+    
+    await callback.message.edit_text(users_text, reply_markup=keyboard)
+    await callback.answer()
+
+# 🎯 ОБРАБОТЧИКИ ID ПОЛЬЗОВАТЕЛЕЙ
+@dp.message(F.text.regexp(r'^\d+$'))
+async def handle_user_id(message: types.Message):
+    """Обработка ID пользователя для управления"""
+    user_id = int(message.text)
+    admin_id = message.from_user.id
+    
+    if not is_admin(admin_id):
+        await message.answer("❌ Доступ запрещен!")
+        return
+    
+    # Проверяем, есть ли такой пользователь в системе
+    if user_id in USERS:
+        # Пользователь существует - предлагаем изменить роль
+        user_data = USERS[user_id]
+        current_role = user_data.get('role', UserRole.CLIENT)
+        
+        role_name = {
+            UserRole.SUPER_ADMIN: "Super Admin",
+            UserRole.ADMIN: "Admin", 
+            UserRole.MANAGER: "Manager",
+            UserRole.COURIER: "Courier",
+            UserRole.CLIENT: "Client"
+        }.get(current_role, "Unknown")
+        
+        await message.answer(
+            f"👤 <b>Пользователь найден:</b>\n\n"
+            f"👤 {user_data['full_name']}\n"
+            f"🆔 ID: {user_id}\n"
+            f"🔑 Текущая роль: {role_name}\n\n"
+            f"🔧 <b>Выберите новую роль:</b>",
+            reply_markup=get_role_selection_keyboard(user_id, "change")
+        )
+    else:
+        # Пользователя нет - предлагаем добавить
+        await message.answer(
+            f"👤 <b>Пользователь не найден:</b>\n\n"
+            f"🆔 ID: {user_id}\n\n"
+            f"➕ <b>Добавить пользователя?</b>\n"
+            f"🔧 <b>Выберите роль для нового пользователя:</b>",
+            reply_markup=get_role_selection_keyboard(user_id, "add")
+        )
+
+def get_role_selection_keyboard(user_id: int, action: str) -> InlineKeyboardMarkup:
+    """Клавиатура выбора роли"""
+    keyboard = InlineKeyboardMarkup(inline_keyboard=[
+        [
+            InlineKeyboardButton(
+                text="👑 Super Admin", 
+                callback_data=f"role_{action}_{user_id}_{UserRole.SUPER_ADMIN}"
+            ),
+            InlineKeyboardButton(
+                text="👨‍💼 Admin", 
+                callback_data=f"role_{action}_{user_id}_{UserRole.ADMIN}"
+            )
+        ],
+        [
+            InlineKeyboardButton(
+                text="👨‍💼 Manager", 
+                callback_data=f"role_{action}_{user_id}_{UserRole.MANAGER}"
+            ),
+            InlineKeyboardButton(
+                text="🚚 Courier", 
+                callback_data=f"role_{action}_{user_id}_{UserRole.COURIER}"
+            )
+        ],
+        [
+            InlineKeyboardButton(
+                text="👤 Client", 
+                callback_data=f"role_{action}_{user_id}_{UserRole.CLIENT}"
+            )
+        ],
+        [
+            InlineKeyboardButton(text="❌ Отмена", callback_data="back_to_users")
+        ]
+    ])
+    return keyboard
+
+@dp.callback_query(F.data.startswith("role_"))
+async def callback_role_action(callback: types.CallbackQuery):
+    """Обработка выбора роли"""
+    if not is_admin(callback.from_user.id):
+        await callback.answer("❌ Доступ запрещен!")
+        return
+    
+    try:
+        parts = callback.data.split("_")
+        action = parts[1]  # add или change
+        user_id = int(parts[2])
+        role = parts[3]
+        
+        if action == "add":
+            # Добавляем нового пользователя
+            USERS[user_id] = {
+                "id": user_id,
+                "full_name": f"User_{user_id}",
+                "role": role,
+                "cart": [],
+                "orders": [],
+                "phone": None,
+                "address": None
+            }
+            
+            role_name = {
+                UserRole.SUPER_ADMIN: "Super Admin",
+                UserRole.ADMIN: "Admin", 
+                UserRole.MANAGER: "Manager",
+                UserRole.COURIER: "Courier",
+                UserRole.CLIENT: "Client"
+            }.get(role, "Unknown")
+            
+            await callback.message.edit_text(
+                f"✅ <b>Пользователь добавлен!</b>\n\n"
+                f"🆔 ID: {user_id}\n"
+                f"👤 Имя: User_{user_id}\n"
+                f"🔑 Роль: {role_name}\n\n"
+                f"💡 <b>Примечание:</b>\n"
+                f"Имя обновится при первом входе в бота",
+                reply_markup=InlineKeyboardMarkup(inline_keyboard=[
+                    [InlineKeyboardButton(text="🔙 Назад к пользователям", callback_data="back_to_users")]
+                ])
+            )
+            
+        elif action == "change":
+            # Изменяем роль существующего пользователя
+            if user_id in USERS:
+                USERS[user_id]["role"] = role
+                
+                role_name = {
+                    UserRole.SUPER_ADMIN: "Super Admin",
+                    UserRole.ADMIN: "Admin", 
+                    UserRole.MANAGER: "Manager",
+                    UserRole.COURIER: "Courier",
+                    UserRole.CLIENT: "Client"
+                }.get(role, "Unknown")
+                
+                await callback.message.edit_text(
+                    f"✅ <b>Роль изменена!</b>\n\n"
+                    f"👤 {USERS[user_id]['full_name']}\n"
+                    f"🆔 ID: {user_id}\n"
+                    f"🔑 Новая роль: {role_name}\n\n"
+                    f"🔄 Изменения вступят в силу при следующем входе",
+                    reply_markup=InlineKeyboardMarkup(inline_keyboard=[
+                        [InlineKeyboardButton(text="🔙 Назад к пользователям", callback_data="back_to_users")]
+                    ])
+                )
+            else:
+                await callback.message.edit_text(
+                    "❌ <b>Ошибка!</b>\n\n"
+                    "Пользователь не найден",
+                    reply_markup=InlineKeyboardMarkup(inline_keyboard=[
+                        [InlineKeyboardButton(text="🔙 Назад к пользователям", callback_data="back_to_users")]
+                    ])
+                )
+        
+        await callback.answer("✅ Готово!")
+        
+    except Exception as e:
+        await callback.answer(f"❌ Ошибка: {e}")
+        logger.error(f"Role action error: {e}")
 
 print("✅ All handlers registered")
 
