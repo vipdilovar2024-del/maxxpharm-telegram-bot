@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Full Bot - Working MAXXPHARM Telegram Bot with Menu
+Full Bot - MAXXPHARM Telegram Bot (Background Worker)
 """
 
 import asyncio
@@ -19,16 +19,21 @@ from aiogram.types import (
 )
 
 # 🚀 МГНОВЕННАЯ ПРОВЕРКА ЗАПУСКА
-print("🚀 BOT STARTING...")
+print("🚀 MAXXPHARM BOT STARTING...")
 print(f"⏰ Time: {time.strftime('%H:%M:%S')}")
 print(f"🐍 Python: {sys.version}")
 print(f"📁 Working dir: {os.getcwd()}")
+print(f"🌐 Environment: {os.getenv('RENDER', 'local')}")
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
 
-BOT_TOKEN = "8357898408:AAEA5TBDYO9cf9tjbCu6ZcrvPQxy9j28KGI"
-ADMIN_ID = 697780123
+# Конфигурация из env переменных
+BOT_TOKEN = os.getenv("BOT_TOKEN", "8357898408:AAEA5TBDYO9cf9tjbCu6ZcrvPQxy9j28KGI")
+ADMIN_ID = int(os.getenv("ADMIN_ID", "697780123"))
+
+print(f"🤖 Bot token: {BOT_TOKEN[:10]}...")
+print(f"👤 Admin ID: {ADMIN_ID}")
 
 # Global flag to prevent multiple instances
 BOT_RUNNING = False
@@ -713,7 +718,7 @@ async def main():
         return
     
     BOT_RUNNING = True
-    logger.info("🚀 Starting MAXXPHARM Full Bot with diagnostics")
+    logger.info("🚀 Starting MAXXPHARM Bot (Background Worker)")
     print("✅ Bot instance flag set to True")
     
     try:
@@ -743,6 +748,8 @@ async def main():
         # Start polling with error handling
         print("🤖 Starting polling...")
         logger.info("🤖 Starting polling...")
+        print("🎯 Background Worker is now running!")
+        
         await dp.start_polling(bot)
         
     except Exception as e:
@@ -756,12 +763,13 @@ async def main():
     finally:
         BOT_RUNNING = False
         logger.info("🛑 Bot stopped")
-        print("🛑 Bot stopped")
+        print("🛑 Background Worker stopped")
 
 if __name__ == "__main__":
     print("🎯 MAIN FUNCTION STARTING...")
+    print("🌐 MAXXPHARM Background Worker")
     try:
-        logger.info("🎯 RUNNING MAXXPHARM FULL BOT")
+        logger.info("🎯 RUNNING MAXXPHARM BOT WORKER")
         print("⚡ Starting asyncio.run(main())...")
         asyncio.run(main())
     except KeyboardInterrupt:
