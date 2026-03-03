@@ -4,9 +4,14 @@ services:
     name: maxxpharm-telegram-bot
     env: python
     plan: free
-    buildCommand: pip install -r requirements.txt
+    buildCommand: pip install --no-cache-dir -r requirements.txt
     startCommand: simple_start.py
     healthCheckPath: /
+    healthCheck:
+      path: /
+      initialDelaySeconds: 30
+      periodSeconds: 10
+      timeoutSeconds: 5
     autoDeploy: true
     envVars:
       - key: BOT_TOKEN
