@@ -35,42 +35,142 @@ BOT_RUNNING = False
 
 print("✅ Imports loaded successfully")
 
+# Role system
+class UserRole:
+    SUPER_ADMIN = "SUPER_ADMIN"
+    ADMIN = "ADMIN"
+    MANAGER = "MANAGER"
+    COURIER = "COURIER"
+    CLIENT = "CLIENT"
+
 # Database
 USERS = {}
 PRODUCTS = [
-    {"id": 1, "name": "Парацетамол", "price": 50, "category": "Обезболивающие", "stock": 100},
-    {"id": 2, "name": "Ибупрофен", "price": 80, "category": "Обезболивающие", "stock": 50},
-    {"id": 3, "name": "Аспирин", "price": 30, "category": "Обезболивающие", "stock": 200},
-    {"id": 4, "name": "Витамин C", "price": 120, "category": "Витамины", "stock": 150},
-    {"id": 5, "name": "Витамин D", "price": 200, "category": "Витамины", "stock": 80},
+    {"id": 1, "name": "Парацетамол", "price": 50, "category": "Обезболивающие", "stock": 100, "description": "Обезболивающее и жаропонижающее"},
+    {"id": 2, "name": "Ибупрофен", "price": 80, "category": "Обезболивающие", "stock": 50, "description": "Противовоспалительное средство"},
+    {"id": 3, "name": "Аспирин", "price": 30, "category": "Обезболивающие", "stock": 200, "description": "Ацетилсалициловая кислота"},
+    {"id": 4, "name": "Витамин C", "price": 120, "category": "Витамины", "stock": 150, "description": "Аскорбиновая кислота 500мг"},
+    {"id": 5, "name": "Витамин D", "price": 200, "category": "Витамины", "stock": 80, "description": "Витамин D3 1000 МЕ"},
+    {"id": 6, "name": "Амоксициллин", "price": 150, "category": "Антибиотики", "stock": 40, "description": "Антибиотик широкого спектра"},
+    {"id": 7, "name": "Арбидол", "price": 300, "category": "Противовирусные", "stock": 60, "description": "Противовирусный препарат"},
 ]
 
 CATEGORIES = ["Обезболивающие", "Витамины", "Антибиотики", "Противовирусные"]
 ORDERS = []
 
-# Keyboards
-def get_main_menu(is_admin=False):
-    if is_admin:
+# User management
+def get_user_role(user_id):
+    if user_id == ADMIN_ID:
+        return UserRole.SUPER_ADMIN
+    return USERS.get(user_id, {}).get("role", UserRole.CLIENT)
+
+def is_admin(user_id):
+    return get_user_role(user_id) in [UserRole.SUPER_ADMIN, UserRole.ADMIN]
+
+def is_manager(user_id):
+    return get_user_role(user_id) in [UserRole.SUPER_ADMIN, UserRole.ADMIN, UserRole.MANAGER]
+
+# Keyboards - ИСПРАВЛЕНО для aiogram 3.4.1
+def get_main_menu(user_id):
+    role = get_user_role(user_id)
+    
+    if role == UserRole.SUPER_ADMIN:
         keyboard = ReplyKeyboardMarkup(
             keyboard=[
-                [KeyboardButton("📊 Статистика")],
-                [KeyboardButton("📦 Заказы"), KeyboardButton("👥 Пользователи")],
-                [KeyboardButton("🧾 Товары"), KeyboardButton("🏷 Категории")],
-                [KeyboardButton("🏪 Склад"), KeyboardButton("⚙ Настройки")],
-                [KeyboardButton("📝 Логи"), KeyboardButton("🚀 Выход")]
+                [KeyboardButton(text="📊 Статистика")],
+                [KeyboardButton(text="📦 Заказы"), KeyboardButton(text="👥 Пользователи")],
+                [KeyboardButton(text="🧾 Товары"), KeyboardButton(text="🏷 Категории")],
+                [KeyboardButton(text="🏪 Склад"), KeyboardButton(text="⚙ Настройки")],
+                [KeyboardButton(text="📝 Логи"), KeyboardButton(text="🚀 Выход")]
             ],
             resize_keyboard=True
         )
-    else:
+    elif role == UserRole.ADMIN:
         keyboard = ReplyKeyboardMarkup(
             keyboard=[
-                [KeyboardButton("🛍 Каталог")],
-                [KeyboardButton("🔍 Поиск"), KeyboardButton("🛒 Корзина")],
-                [KeyboardButton("📦 Мои заказы"), KeyboardButton("📞 Поддержка")]
+                [KeyboardButton(text="📊 Статистика")],
+                [KeyboardButton(text="📦 Заказы"), KeyboardButton(text="👥 Пользователи")],
+                [KeyboardButton(text="🧾 Товары"), KeyboardButton(text="🏪 Склад")],
+                [KeyboardButton(text="🚀 Выход")]
             ],
             resize_keyboard=True
         )
+    elif role == UserRole.MANAGER:
+        keyboard = ReplyKeyboardMarkup(
+            keyboard=[
+                [KeyboardButton(text="📊 Статистика")],
+                [KeyboardButton(text="📦 Заказы"), KeyboardButton(text="🧾 Товары")],
+                [KeyboardButton(text="🚀 Выход")]
+            ],
+            resize_keyboard=True
+        )
+    elif role == UserRole.COURIER:
+        keyboard = ReplyKeyboardMarkup(
+            keyboard=[
+                [KeyboardButton(text="📦 Мои доставки")],
+                [KeyboardButton(text="🗺 Карта"), KeyboardButton(text="📞 Поддержка")],
+                [KeyboardButton(text="🚀 Выход")]
+            ],
+            resize_keyboard=True
+        )
+    else:  # CLIENT
+        keyboard = ReplyKeyboardMarkup(
+            keyboard=[
+                [KeyboardButton(text="🛍 Каталог")],
+                [KeyboardButton(text="🔍 Поиск"), KeyboardButton(text="🛒 Корзина")],
+                [KeyboardButton(text="📦 Мои заказы"), KeyboardButton(text="📞 Поддержка")]
+            ],
+            resize_keyboard=True
+        )
+    
     return keyboard
+
+def get_categories_keyboard():
+    keyboard = InlineKeyboardMarkup(inline_keyboard=[])
+    for category in CATEGORIES:
+        keyboard.inline_keyboard.append([
+            InlineKeyboardButton(text=category, callback_data=f"category_{category}")
+        ])
+    keyboard.inline_keyboard.append([
+        InlineKeyboardButton(text="🔙 Назад", callback_data="back_to_main")
+    ])
+    return keyboard
+
+def get_products_keyboard(category=None):
+    keyboard = InlineKeyboardMarkup(inline_keyboard=[])
+    
+    if category:
+        products = [p for p in PRODUCTS if p["category"] == category]
+    else:
+        products = PRODUCTS
+    
+    for product in products:
+        keyboard.inline_keyboard.append([
+            InlineKeyboardButton(
+                text=f"{product['name']} - {product['price']}₽ ({product['stock']} шт)",
+                callback_data=f"product_{product['id']}"
+            )
+        ])
+    
+    keyboard.inline_keyboard.append([
+        InlineKeyboardButton(text="🔙 Назад", callback_data="back_to_categories")
+    ])
+    return keyboard
+
+def get_product_actions_keyboard(product_id):
+    keyboard = InlineKeyboardMarkup(inline_keyboard=[
+        [
+            InlineKeyboardButton(text="➕ В корзину", callback_data=f"add_to_cart_{product_id}"),
+            InlineKeyboardButton(text="ℹ️ Информация", callback_data=f"product_info_{product_id}")
+        ],
+        [
+            InlineKeyboardButton(text="🔙 Назад", callback_data="back_to_products")
+        ]
+    ])
+    return keyboard
+
+# Keyboards - УДАЛЯЕМ ДУБЛИКАТ
+# def get_main_menu(is_admin=False): - УДАЛЕНО
 
 def get_categories_keyboard():
     keyboard = InlineKeyboardMarkup(inline_keyboard=[])
