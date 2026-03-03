@@ -174,11 +174,17 @@ def get_product_actions_keyboard(product_id):
 bot = Bot(token=BOT_TOKEN, default=DefaultBotProperties(parse_mode=ParseMode.HTML))
 dp = Dispatcher()
 
+# 🎯 ПРОВЕРКА РЕГИСТРАЦИИ HANDLERS
+print("🔧 Registering handlers...")
+
 # Handlers
 @dp.message(Command("start"))
 async def cmd_start(message: types.Message):
+    print(f"🎯 START HANDLER CALLED by {message.from_user.full_name} (ID: {message.from_user.id})")
     user_id = message.from_user.id
     role = get_user_role(user_id)
+    
+    print(f"👤 User role: {role}")
     
     # Initialize user if not exists
     if user_id not in USERS:
@@ -191,6 +197,7 @@ async def cmd_start(message: types.Message):
             "phone": None,
             "address": None
         }
+        print(f"✅ User {user_id} initialized")
     
     # Welcome message based on role
     if role == UserRole.SUPER_ADMIN:
@@ -235,8 +242,15 @@ async def cmd_start(message: types.Message):
             "Выберите действие в меню:"
         )
     
-    await message.answer(welcome_text, reply_markup=get_main_menu(user_id))
+    # Get menu and check
+    menu = get_main_menu(user_id)
+    print(f"📱 Menu generated for role {role}")
+    
+    await message.answer(welcome_text, reply_markup=menu)
     logger.info(f"User {user_id} ({role}) started bot")
+    print(f"✅ Start message sent with menu to {message.from_user.full_name}")
+
+print("✅ All handlers registered")
 
 @dp.message(Command("help"))
 async def cmd_help(message: types.Message):
