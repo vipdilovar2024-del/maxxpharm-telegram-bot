@@ -5,7 +5,7 @@ services:
     env: python
     plan: free
     buildCommand: pip install --no-cache-dir -r requirements.txt
-    startCommand: simple_start.py
+    startCommand: full_bot.py
     healthCheckPath: /
     healthCheck:
       path: /
