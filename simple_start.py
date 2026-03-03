@@ -1,11 +1,14 @@
 #!/usr/bin/env python3
 """
 MAXXPHARM Bot - Stable version with aiogram 3 and full functionality
-Based on working polling logic from main.py
+Fixed: Prevents multiple bot instances
 """
 
 import asyncio
 import logging
+import os
+import signal
+import sys
 from aiogram import Bot, Dispatcher, types, F
 from aiogram.enums import ParseMode
 from aiogram.client.default import DefaultBotProperties
@@ -20,6 +23,9 @@ logger = logging.getLogger(__name__)
 
 BOT_TOKEN = "8357898408:AAEA5TBDYO9cf9tjbCu6ZcrvPQxy9j28KGI"
 ADMIN_ID = 697780123
+
+# Global flag to prevent multiple instances
+BOT_RUNNING = False
 
 # Role system
 class UserRole:
@@ -671,19 +677,47 @@ async def callback_product_info(callback: types.CallbackQuery):
     await callback.answer()
 
 async def main():
+    global BOT_RUNNING
+    
+    # Check if bot is already running
+    if BOT_RUNNING:
+        logger.warning("⚠️ Bot is already running! Exiting...")
+        return
+    
+    BOT_RUNNING = True
     logger.info("🚀 Starting MAXXPHARM Stable Bot with aiogram 3")
     
-    # Delete webhook
-    await bot.delete_webhook(drop_pending_updates=True)
-    logger.info("✅ Webhook deleted")
-    
-    # Get bot info
-    bot_info = await bot.get_me()
-    logger.info(f"✅ Bot: {bot_info.full_name} (@{bot_info.username})")
-    
-    # Start polling
-    logger.info("🤖 Starting polling...")
-    await dp.start_polling(bot)
+    try:
+        # Delete webhook with force
+        await bot.delete_webhook(drop_pending_updates=True)
+        logger.info("✅ Webhook deleted")
+        
+        # Get bot info
+        bot_info = await bot.get_me()
+        logger.info(f"✅ Bot: {bot_info.full_name} (@{bot_info.username})")
+        
+        # Add signal handlers for graceful shutdown
+        def signal_handler(signum, frame):
+            logger.info(f"🛑 Received signal {signum}, shutting down...")
+            BOT_RUNNING = False
+            sys.exit(0)
+        
+        signal.signal(signal.SIGINT, signal_handler)
+        signal.signal(signal.SIGTERM, signal_handler)
+        
+        # Start polling with error handling
+        logger.info("🤖 Starting polling...")
+        await dp.start_polling(bot)
+        
+    except Exception as e:
+        logger.error(f"❌ Bot error: {e}")
+        if "conflict" in str(e).lower():
+            logger.error("🔄 Bot conflict detected! Another instance is running.")
+        BOT_RUNNING = False
+        raise
+    finally:
+        BOT_RUNNING = False
+        logger.info("🛑 Bot stopped")
 
 if __name__ == "__main__":
     try:
@@ -695,3 +729,4 @@ if __name__ == "__main__":
         logger.error(f"❌ FATAL ERROR: {e}")
         import traceback
         traceback.print_exc()
+        sys.exit(1)
