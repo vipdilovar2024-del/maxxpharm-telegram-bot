@@ -1,36 +1,88 @@
 #!/usr/bin/env python3
 """
-Full Bot - MAXXPHARM Telegram Bot (Background Worker) - CLEAN VERSION
-"""
+Full Bot# 🤖 MAXXPHARM AI-CRM TELEGRAM BOT
+# Полнофункциональный CRM с AI-анализом и автоматизацией
 
 import asyncio
 import logging
-import os
-import signal
 import sys
-import time
+import os
+from datetime import datetime, timedelta
+from typing import Dict, List, Any, Optional
+from dataclasses import dataclass
+from enum import Enum
+import json
+
+# 🤖 Telegram imports
 from aiogram import Bot, Dispatcher, types, F
-from aiogram.enums import ParseMode
-from aiogram.client.default import DefaultBotProperties
 from aiogram.filters import Command
 from aiogram.types import (
-    ReplyKeyboardMarkup, KeyboardButton,
-    InlineKeyboardMarkup, InlineKeyboardButton
+    Message, CallbackQuery, ReplyKeyboardMarkup, KeyboardButton,
+    InlineKeyboardMarkup, InlineKeyboardButton, ReplyKeyboardRemove
 )
+from aiogram.fsm.context import FSMContext
+from aiogram.fsm.state import State, StatesGroup
+from aiogram.fsm.storage.memory import MemoryStorage
+
+# 🗄️ Database imports
+import asyncpg
+from asyncpg import Connection
+
+# 🧠 AI Brain imports
+import ai_brain
+
+# 🔄 Data Pipeline imports
+import data_pipeline
+
+# ⏰ AI Scheduler imports
+import ai_scheduler
+
+# 📊 Configuration
+BOT_TOKEN = os.getenv("BOT_TOKEN", "7759398408:AAE8sTBDYO9cf9tjbCu6ZcrvPQxy9j28KGI")
+ADMIN_ID = int(os.getenv("ADMIN_ID", "697780123"))
+RENDER = os.getenv("RENDER", "False").lower() == "true"
+
+# 🗄️ Database Configuration
+DB_HOST = os.getenv("DB_HOST", "localhost")
+DB_PORT = int(os.getenv("DB_PORT", "5432"))
+DB_USER = os.getenv("DB_USER", "postgres")
+DB_PASSWORD = os.getenv("DB_PASSWORD", "password")
+DB_NAME = os.getenv("DB_NAME", "maxxpharm_crm")
+
+# 🧠 AI Configuration
+OPENAI_API_KEY = os.getenv("OPENAI_API_KEY", "")
+
+# 📊 Logging Configuration
+LOG_LEVEL = os.getenv("LOG_LEVEL", "INFO")
+ENVIRONMENT = os.getenv("ENVIRONMENT", "development")
+DEBUG = os.getenv("DEBUG", "False").lower() == "true"
+
+# Настройка логирования
+logging.basicConfig(
+    level=getattr(logging, LOG_LEVEL),
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+    handlers=[
+        logging.StreamHandler(sys.stdout),
+        logging.FileHandler('maxxpharm_bot.log')
+    ]
+)
+
+logger = logging.getLogger(__name__)
+
+# 🤖 Инициализация бота
+bot = Bot(token=BOT_TOKEN, parse_mode="HTML")
+storage = MemoryStorage()
+dp = Dispatcher(storage=storage)
+
+# 🚀 Глобальный флаг для предотвращения множественных запусков
+BOT_RUNNING = False
 
 # 🚀 МГНОВЕННАЯ ПРОВЕРКА ЗАПУСКА
 print("🚀 MAXXPHARM BOT STARTING...")
-print(f"⏰ Time: {time.strftime('%H:%M:%S')}")
+print(f"⏰ Time: {datetime.now().strftime('%H:%M:%S')}")
 print(f"🐍 Python: {sys.version}")
 print(f"📁 Working dir: {os.getcwd()}")
 print(f"🌐 Environment: {os.getenv('RENDER', 'local')}")
-
-logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-logger = logging.getLogger(__name__)
-
-# Конфигурация из env переменных
-BOT_TOKEN = os.getenv("BOT_TOKEN", "8357898408:AAEA5TBDYO9cf9tjbCu6ZcrvPQxy9j28KGI")
-ADMIN_ID = int(os.getenv("ADMIN_ID", "697780123"))
 
 print(f"🤖 Bot token: {BOT_TOKEN[:10]}...")
 print(f"👤 Admin ID: {ADMIN_ID}")
