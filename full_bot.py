@@ -1724,6 +1724,357 @@ async def callback_role_action(callback: types.CallbackQuery):
         await callback.answer(f"❌ Ошибка: {e}")
         logger.error(f"Role action error: {e}")
 
+# 🎯 ОБРАБОТЧИКИ ВСЕХ КНОПОК МЕНЮ
+@dp.message(F.text == "⚙ Настройки системы")
+async def cmd_settings(message: types.Message):
+    if not is_admin(message.from_user.id):
+        await message.answer("❌ Доступ запрещен!")
+        return
+    
+    await message.answer(
+        "⚙ <b>Настройки системы</b>\n\n"
+        "📝 Выберите действие:",
+        reply_markup=InlineKeyboardMarkup(inline_keyboard=[
+            [
+                InlineKeyboardButton(text="📝 Изменить тексты", callback_data="settings_texts"),
+                InlineKeyboardButton(text="🔔 Изменить уведомления", callback_data="settings_notifications")
+            ],
+            [
+                InlineKeyboardButton(text="🔗 Настроить интеграции", callback_data="settings_integrations"),
+                InlineKeyboardButton(text="🔙 Назад", callback_data="admin_back_main")
+            ]
+        ])
+    )
+    log_activity(message.from_user.id, "VIEW_SETTINGS", "Viewed system settings")
+
+@dp.message(F.text == "🔗 Интеграция 1С")
+async def cmd_integration_1c(message: types.Message):
+    if not is_admin(message.from_user.id):
+        await message.answer("❌ Доступ запрещен!")
+        return
+    
+    await message.answer(
+        "🔗 <b>Интеграция 1С</b>\n\n"
+        "📊 Статус: 🟢 Подключено\n"
+        "🔄 Последняя синхронизация: 5 минут назад\n\n"
+        "📝 Выберите действие:",
+        reply_markup=InlineKeyboardMarkup(inline_keyboard=[
+            [
+                InlineKeyboardButton(text="🔄 Синхронизировать", callback_data="sync_1c"),
+                InlineKeyboardButton(text="📊 Статистика обмена", callback_data="sync_stats")
+            ],
+            [
+                InlineKeyboardButton(text="⚙️ Настройки", callback_data="sync_settings"),
+                InlineKeyboardButton(text="🔙 Назад", callback_data="admin_back_main")
+            ]
+        ])
+    )
+    log_activity(message.from_user.id, "VIEW_INTEGRATION", "Viewed 1C integration")
+
+@dp.message(F.text == "📦 Управление статусами")
+async def cmd_manage_statuses(message: types.Message):
+    if not is_admin(message.from_user.id):
+        await message.answer("❌ Доступ запрещен!")
+        return
+    
+    await message.answer(
+        "📦 <b>Управление статусами</b>\n\n"
+        "📊 Текущие статусы:\n"
+        "• 🆕 Новая\n"
+        "• ⏳ В обработке\n"
+        "• 📦 Собирается\n"
+        "• 🚚 Доставляется\n"
+        "• ✅ Выполнена\n"
+        "• ❌ Отменена\n\n"
+        "📝 Выберите действие:",
+        reply_markup=InlineKeyboardMarkup(inline_keyboard=[
+            [
+                InlineKeyboardButton(text="➕ Добавить статус", callback_data="status_add"),
+                InlineKeyboardButton(text="✏️ Изменить статус", callback_data="status_edit")
+            ],
+            [
+                InlineKeyboardButton(text="🗑️ Удалить статус", callback_data="status_delete"),
+                InlineKeyboardButton(text="🔙 Назад", callback_data="admin_back_main")
+            ]
+        ])
+    )
+    log_activity(message.from_user.id, "VIEW_STATUSES", "Viewed status management")
+
+@dp.message(F.text == "📢 Рассылки")
+async def cmd_broadcasts(message: types.Message):
+    if not is_admin(message.from_user.id):
+        await message.answer("❌ Доступ запрещен!")
+        return
+    
+    await message.answer(
+        "📢 <b>Рассылки</b>\n\n"
+        "📝 Выберите тип рассылки:",
+        reply_markup=InlineKeyboardMarkup(inline_keyboard=[
+            [
+                InlineKeyboardButton(text="👤 Всем пользователям", callback_data="broadcast_all"),
+                InlineKeyboardButton(text="👥 По ролям", callback_data="broadcast_roles")
+            ],
+            [
+                InlineKeyboardButton(text="📊 По статусу", callback_data="broadcast_status"),
+                InlineKeyboardButton(text="📊 История рассылок", callback_data="broadcast_history")
+            ],
+            [
+                InlineKeyboardButton(text="🔙 Назад", callback_data="admin_back_main")
+            ]
+        ])
+    )
+    log_activity(message.from_user.id, "VIEW_BROADCASTS", "Viewed broadcasts")
+
+@dp.message(F.text == "🗄 Архив")
+async def cmd_archive(message: types.Message):
+    if not is_admin(message.from_user.id):
+        await message.answer("❌ Доступ запрещен!")
+        return
+    
+    await message.answer(
+        "🗄 <b>Архив</b>\n\n"
+        "📊 Выберите действие:",
+        reply_markup=InlineKeyboardMarkup(inline_keyboard=[
+            [
+                InlineKeyboardButton(text="📋 Завершенные заявки", callback_data="archive_completed"),
+                InlineKeyboardButton(text="🔍 Поиск по дате", callback_data="archive_search_date")
+            ],
+            [
+                InlineKeyboardButton(text="👤 Поиск по клиенту", callback_data="archive_search_client"),
+                InlineKeyboardButton(text="📊 Статистика архива", callback_data="archive_stats")
+            ],
+            [
+                InlineKeyboardButton(text="🔙 Назад", callback_data="admin_back_main")
+            ]
+        ])
+    )
+    log_activity(message.from_user.id, "VIEW_ARCHIVE", "Viewed archive")
+
+@dp.message(F.text == "🔐 Управление админами")
+async def cmd_manage_admins(message: types.Message):
+    if not is_director(message.from_user.id):
+        await message.answer("❌ Доступ запрещен! Только для руководства.")
+        return
+    
+    await message.answer(
+        "🔐 <b>Управление администраторами</b>\n\n"
+        "📝 Выберите действие:",
+        reply_markup=InlineKeyboardMarkup(inline_keyboard=[
+            [
+                InlineKeyboardButton(text="➕ Добавить администратора", callback_data="admin_add_admin"),
+                InlineKeyboardButton(text="🗑️ Удалить администратора", callback_data="admin_remove_admin")
+            ],
+            [
+                InlineKeyboardButton(text="🔑 Изменить права", callback_data="admin_change_permissions"),
+                InlineKeyboardButton(text="📊 Список админов", callback_data="admin_list_admins")
+            ],
+            [
+                InlineKeyboardButton(text="🔙 Назад", callback_data="admin_back_main")
+            ]
+        ])
+    )
+    log_activity(message.from_user.id, "VIEW_ADMIN_MANAGEMENT", "Viewed admin management")
+
+# 🎯 ОБРАБОТЧИКИ ДЛЯ ОПЕРАТОРОВ
+@dp.message(F.text == "📈 Моя статистика")
+async def cmd_my_stats(message: types.Message):
+    if get_user_role(message.from_user.id) not in [UserRole.OPERATOR, UserRole.COLLECTOR, UserRole.INSPECTOR, UserRole.COURIER]:
+        await message.answer("❌ Доступ запрещен!")
+        return
+    
+    user_id = message.from_user.id
+    role = get_user_role(user_id)
+    
+    # Заглушка статистики
+    stats_text = (
+        f"📈 <b>Моя статистика</b>\n\n"
+        f"👤 Роль: {role}\n"
+        f"📊 Обработано заявок: 0\n"
+        f"✅ Выполнено: 0\n"
+        f"⏳ В работе: 0\n"
+        f"💰 Среднее время: 0 мин\n\n"
+        f"📅 Период: Сегодня"
+    )
+    
+    await message.answer(stats_text, reply_markup=get_main_menu(user_id))
+    log_activity(user_id, "VIEW_MY_STATS", f"Viewed personal stats for {role}")
+
+# 🎯 ОБРАБОТЧИКИ ДЛЯ СБОРЩИКОВ
+@dp.message(F.text == "📦 Мои сборки")
+async def cmd_my_collections(message: types.Message):
+    if not can_collect_orders(message.from_user.id):
+        await message.answer("❌ Доступ запрещен!")
+        return
+    
+    await message.answer(
+        "📦 <b>Мои сборки</b>\n\n"
+        "📝 У вас пока нет сборок",
+        reply_markup=get_main_menu(message.from_user.id)
+    )
+    log_activity(message.from_user.id, "VIEW_MY_COLLECTIONS", "Viewed personal collections")
+
+# 🎯 ОБРАБОТЧИКИ ДЛЯ ПРОВЕРЩИКОВ
+@dp.message(F.text == "🔍 Проверка качества")
+async def cmd_quality_check(message: types.Message):
+    if not can_inspect_orders(message.from_user.id):
+        await message.answer("❌ Доступ запрещен!")
+        return
+    
+    await message.answer(
+        "🔍 <b>Проверка качества</b>\n\n"
+        "📝 Заявок для проверки нет",
+        reply_markup=get_main_menu(message.from_user.id)
+    )
+    log_activity(message.from_user.id, "VIEW_QUALITY_CHECK", "Viewed quality check")
+
+# 🎯 ОБРАБОТЧИКИ ДЛЯ КУРЬЕРОВ
+@dp.message(F.text == "🚚 Мои доставки")
+async def cmd_my_deliveries(message: types.Message):
+    if not can_deliver_orders(message.from_user.id):
+        await message.answer("❌ Доступ запрещен!")
+        return
+    
+    await message.answer(
+        "🚚 <b>Мои доставки</b>\n\n"
+        "📝 У вас пока нет доставок",
+        reply_markup=get_main_menu(message.from_user.id)
+    )
+    log_activity(message.from_user.id, "VIEW_MY_DELIVERIES", "Viewed personal deliveries")
+
+@dp.message(F.text == "🗺 Карта")
+async def cmd_map(message: types.Message):
+    if get_user_role(message.from_user.id) != UserRole.COURIER:
+        await message.answer("❌ Доступ запрещен!")
+        return
+    
+    await message.answer(
+        "🗺 <b>Карта доставок</b>\n\n"
+        "📍 Загрузка карты...",
+        reply_markup=get_main_menu(message.from_user.id)
+    )
+    log_activity(message.from_user.id, "VIEW_MAP", "Viewed delivery map")
+
+# 🎯 ОБРАБОТЧИКИ ДЛЯ КЛИЕНТОВ
+@dp.message(F.text == "📷 Отправить фото")
+async def cmd_photo_application(message: types.Message):
+    if get_user_role(message.from_user.id) != UserRole.PHARMACY:
+        await message.answer("❌ Эта функция доступна только для аптек!")
+        return
+    
+    await message.answer(
+        "📷 <b>Фото заявка</b>\n\n"
+        "📸 Отправьте фото вашей заявки:",
+        reply_markup=ReplyKeyboardMarkup(
+            keyboard=[[KeyboardButton(text="❌ Отменить заявку")]],
+            resize_keyboard=True
+        )
+    )
+
+@dp.message(F.text == "🎤 Отправить голосовое")
+async def cmd_voice_application(message: types.Message):
+    if get_user_role(message.from_user.id) != UserRole.PHARMACY:
+        await message.answer("❌ Эта функция доступна только для аптек!")
+        return
+    
+    await message.answer(
+        "🎤 <b>Голосовая заявка</b>\n\n"
+        "🎙️ Запишите и отправьте голосовое сообщение:",
+        reply_markup=ReplyKeyboardMarkup(
+            keyboard=[[KeyboardButton(text="❌ Отменить заявку")]],
+            resize_keyboard=True
+        )
+    )
+
+# 🎯 ОБРАБОТЧИКИ ДЛЯ ФОТО И ГОЛОСОВЫХ
+@dp.message(F.photo)
+async def handle_photo_application(message: types.Message):
+    if get_user_role(message.from_user.id) != UserRole.PHARMACY:
+        return
+    
+    # Проверяем, не это ли ответ на приглашение отправить фото
+    if "Отправьте фото вашей заявки" in message.reply_to_message.text if message.reply_to_message else "":
+        # Создаем фото заявку
+        import datetime
+        app_id = len(CLIENT_APPLICATIONS) + 1
+        
+        photo_info = message.photo[-1]  # Берем самое большое фото
+        file_id = photo_info.file_id
+        
+        application = {
+            "id": app_id,
+            "client_id": message.from_user.id,
+            "type": "photo",
+            "content": f"FILE_ID:{file_id}",
+            "timestamp": datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+            "status": "Новая"
+        }
+        
+        CLIENT_APPLICATIONS.append(application)
+        
+        await message.answer(
+            f"✅ <b>Заявка создана!</b>\n\n"
+            f"🆔 ID: {app_id}\n"
+            f"📸 Тип: Фото\n"
+            f"📊 Статус: Новая\n\n"
+            f"📞 Оператор свяжется с вами в ближайшее время",
+            reply_markup=get_main_menu(message.from_user.id)
+        )
+        
+        log_activity(message.from_user.id, "APPLICATION_CREATED", f"Photo application #{app_id}")
+        await notify_operators(application)
+
+@dp.message(F.voice)
+async def handle_voice_application(message: types.Message):
+    if get_user_role(message.from_user.id) != UserRole.PHARMACY:
+        return
+    
+    # Проверяем, не это ли ответ на приглашение отправить голосовое
+    if "Запишите и отправьте голосовое сообщение" in message.reply_to_message.text if message.reply_to_message else "":
+        # Создаем голосовую заявку
+        import datetime
+        app_id = len(CLIENT_APPLICATIONS) + 1
+        
+        voice_info = message.voice
+        file_id = voice_info.file_id
+        
+        application = {
+            "id": app_id,
+            "client_id": message.from_user.id,
+            "type": "voice",
+            "content": f"FILE_ID:{file_id}",
+            "timestamp": datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+            "status": "Новая"
+        }
+        
+        CLIENT_APPLICATIONS.append(application)
+        
+        await message.answer(
+            f"✅ <b>Заявка создана!</b>\n\n"
+            f"🆔 ID: {app_id}\n"
+            f"🎤 Тип: Голосовое\n"
+            f"📊 Статус: Новая\n\n"
+            f"📞 Оператор свяжется с вами в ближайшее время",
+            reply_markup=get_main_menu(message.from_user.id)
+        )
+        
+        log_activity(message.from_user.id, "APPLICATION_CREATED", f"Voice application #{app_id}")
+        await notify_operators(application)
+
+# 🎯 ОБРАБОТЧИКИ ДЛЯ ОТМЕНЫ РЕГИСТРАЦИИ
+@dp.message(F.text == "❌ Отменить регистрацию")
+async def cmd_cancel_registration(message: types.Message):
+    user_id = message.from_user.id
+    
+    if user_id in REGISTRATION_DATA:
+        del REGISTRATION_DATA[user_id]
+    
+    await message.answer(
+        "❌ <b>Регистрация отменена</b>\n\n"
+        "📋 Вы вернулись в главное меню",
+        reply_markup=get_main_menu(user_id)
+    )
+    log_activity(user_id, "REGISTRATION_CANCELLED", "User cancelled registration")
+
 print("✅ All handlers registered")
 
 async def main():
