@@ -878,7 +878,13 @@ async def main():
     try:
         # Инициализация системных компонентов
         print("🔧 Initializing system components...")
-        system_init_success = await init_system_components()
+        
+        # 🚨 ВРЕМЕННО ОТКЛЮЧАЕМ СИСТЕМНЫЕ КОМПОНЕНТЫ ДЛЯ RENDER
+        if RENDER:
+            print("🔧 Skipping system components (Render mode)...")
+            system_init_success = True
+        else:
+            system_init_success = await init_system_components()
         
         if not system_init_success:
             print("❌ System components initialization failed!")
