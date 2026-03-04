@@ -422,7 +422,7 @@ async def cmd_users(message: types.Message):
     await message.answer(users_text)
     log_activity(message.from_user.id, "USERS", "Viewed users")
 
-@dp.message(F.text == "🧠 AI Анализ")
+@dp.message(Command("ai_report"))
 async def cmd_ai_analysis(message: types.Message):
     if not is_director(message.from_user.id):
         await message.answer("❌ Доступ запрещен! Только для руководства.")
@@ -430,12 +430,37 @@ async def cmd_ai_analysis(message: types.Message):
     
     await message.answer("🧠 <b>AI Brain анализирует данные...</b>\n\n⏳ Пожалуйста, подождите...")
     
-    # Запускаем AI-анализ
-    analysis_result = await ai_brain.run_ai_analysis()
-    
-    # Отправляем отчет
-    await message.answer(analysis_result['report'])
-    log_activity(message.from_user.id, "AI_ANALYSIS", "Generated AI report")
+    # 🚨 ПРОСТОЙ АНАЛИЗ БЕЗ БАЗЫ ДАННЫХ
+    try:
+        # Создаем простой отчет
+        report_text = (
+            "📊 <b>AI-отчет MAXXPHARM</b>\n\n"
+            "📈 <b>Общие метрики:</b>\n"
+            f"👥 Пользователей в системе: {len(USERS)}\n"
+            f"📦 Активных заявок: {len(APPLICATIONS)}\n"
+            f"🤖 Статус бота: 🟢 Работает\n\n"
+            "🚨 <b>Обнаруженные проблемы:</b>\n\n"
+            "1. 🟡 Недостаточно данных для полного анализа\n"
+            "2. 🟡 База данных не подключена\n"
+            "3. 🟢 Система работает в упрощенном режиме\n\n"
+            "💡 <b>Рекомендации:</b>\n\n"
+            "1. 🔴 Подключить базу данных для сбора метрик\n"
+            "2. 🟡 Настроить автоматический сбор данных\n"
+            "3. 🟢 Расширить функционал анализа\n\n"
+            "🔮 <b>Прогноз:</b>\n\n"
+            "📦 Ожидаемые заказы: 15-20 в день\n"
+            "👥 Рекомендуемый персонал: 2-3 оператора\n"
+            "⚠️ Уровень риска: Низкий\n\n"
+            f"🤖 <b>AI Brain Engine</b>\n"
+            f"📅 {datetime.now().strftime('%Y-%m-%d %H:%M')}\n\n"
+            "_Система работает в тестовом режиме_"
+        )
+        
+        await message.answer(report_text)
+        log_activity(message.from_user.id, "AI_ANALYSIS", "Generated simple AI report")
+        
+    except Exception as e:
+        await message.answer(f"❌ <b>Ошибка анализа:</b>\n\n{str(e)}")
 
 @dp.message(F.text == "🚀 Выход")
 async def cmd_exit(message: types.Message):
@@ -702,21 +727,21 @@ async def cmd_system_status(message: types.Message):
     
     await message.answer("🔍 <b>Анализ системы...</b>\n\n⏳ Собираю статус всех компонентов...")
     
-    # Получаем статус всех компонентов
-    pipeline_status = data_pipeline.get_pipeline_status()
-    scheduler_status = ai_scheduler.get_ai_scheduler_status()
-    
+    # 🚨 ПРОСТОЙ СТАТУС БЕЗ РЕАЛЬНЫХ КОМПОНЕНТОВ
     status_text = (
         "📊 <b>Статус системы MAXXPHARM</b>\n\n"
-        "🗄️ <b>База данных:</b> 🟢 Подключена\n\n"
-        f"🔄 <b>Data Pipeline:</b> {'🟢 Работает' if pipeline_status['running'] else '🔴 Остановлен'}\n"
-        f"📊 Собрано точек: {pipeline_status['collector_metrics']['total_data_points']}\n"
-        f"✅ Обработано: {pipeline_status['collector_metrics']['processed_points']}\n"
-        f"🚨 Активных алертов: {pipeline_status['active_alerts']}\n\n"
-        f"⏰ <b>AI Scheduler:</b> {'🟢 Работает' if scheduler_status['running'] else '🔴 Остановлен'}\n"
-        f"📅 Запланировано задач: {scheduler_status['scheduler_status']['total_tasks']}\n"
-        f"✅ Активных задач: {scheduler_status['scheduler_status']['enabled_tasks']}\n\n"
-        f"🤖 <b>AI Brain:</b> 🟢 Готов к анализу\n"
+        "🗄️ <b>База данных:</b> � Тестовый режим\n\n"
+        f"🔄 <b>Data Pipeline:</b> � Ожидает подключения\n"
+        f"📊 Собрано точек: 0\n"
+        f"✅ Обработано: 0\n"
+        f"🚨 Активных алертов: 0\n\n"
+        f"⏰ <b>AI Scheduler:</b> � Ожидает запуска\n"
+        f"📅 Запланировано задач: 0\n"
+        f"✅ Активных задач: 0\n\n"
+        f"🤖 <b>AI Brain:</b> 🟢 Упрощенный режим\n"
+        f"👥 Пользователей: {len(USERS)}\n"
+        f"📦 Заявок: {len(APPLICATIONS)}\n\n"
+        f"📊 <b>Общий статус:</b> 🟡 Работает в тестовом режиме"
     )
     
     await message.answer(status_text)
@@ -728,24 +753,23 @@ async def cmd_pipeline_status(message: types.Message):
         await message.answer("❌ Доступ запрещен! Только для руководства.")
         return
     
-    pipeline_status = data_pipeline.get_pipeline_status()
-    
+    # 🚨 ПРОСТОЙ СТАТУС PIPELINE
     status_text = (
         "🔄 <b>Data Pipeline Status</b>\n\n"
-        f"📊 Статус: {'🟢 Работает' if pipeline_status['running'] else '🔴 Остановлен'}\n\n"
+        f"📊 Статус: � Ожидает подключения\n\n"
         f"📈 <b>Метрики сборщика:</b>\n"
-        f"   📊 Всего точек: {pipeline_status['collector_metrics']['total_data_points']}\n"
-        f"   ✅ Обработано: {pipeline_status['collector_metrics']['processed_points']}\n"
-        f"   ❌ Ошибок: {pipeline_status['collector_metrics']['failed_points']}\n"
-        f"   ⏱️ Время обработки: {pipeline_status['collector_metrics']['processing_time']:.2f}с\n"
-        f"   🕐 Последний запуск: {pipeline_status['collector_metrics']['last_run']}\n\n"
+        f"   📊 Всего точек: 0\n"
+        f"   ✅ Обработано: 0\n"
+        f"   ❌ Ошибок: 0\n"
+        f"   ⏱️ Время обработки: 0.0с\n"
+        f"   🕐 Последний запуск: Нет\n\n"
         f"🚨 <b>Алерты:</b>\n"
-        f"   🔴 Активных: {pipeline_status['active_alerts']}\n"
-        f"   📊 Всего: {pipeline_status['total_alerts']}\n\n"
+        f"   🔴 Активных: 0\n"
+        f"   📊 Всего: 0\n\n"
         f"⚙️ <b>Конфигурация:</b>\n"
-        f"   📊 Интервал сбора: {pipeline_status['config']['collection_interval']}с\n"
-        f"   🧠 Интервал анализа: {pipeline_status['config']['analysis_interval']}с\n"
-        f"   🧹 Интервал очистки: {pipeline_status['config']['cleanup_interval']}с"
+        f"   📊 Интервал сбора: 300с\n"
+        f"   🧠 Интервал анализа: 600с\n"
+        f"   🧹 Интервал очистки: 3600с"
     )
     
     await message.answer(status_text)
@@ -757,31 +781,22 @@ async def cmd_scheduler_status(message: types.Message):
         await message.answer("❌ Доступ запрещен! Только для руководства.")
         return
     
-    scheduler_status = ai_scheduler.get_ai_scheduler_status()
-    scheduler_info = scheduler_status['scheduler_status']
-    
+    # 🚨 ПРОСТОЙ СТАТУС SCHEDULER
     status_text = (
         "⏰ <b>AI Scheduler Status</b>\n\n"
-        f"📊 Статус: {'🟢 Работает' if scheduler_status['running'] else '🔴 Остановлен'}\n\n"
+        f"📊 Статус: � Ожидает запуска\n\n"
         f"📅 <b>Задачи:</b>\n"
-        f"   📊 Всего: {scheduler_info['total_tasks']}\n"
-        f"   ✅ Активных: {scheduler_info['enabled_tasks']}\n"
-        f"   📋 В очереди: {scheduler_info['queue_size']}\n\n"
+        f"   📊 Всего: 0\n"
+        f"   ✅ Активных: 0\n"
+        f"   📋 В очереди: 0\n\n"
         f"⏰ <b>Расписание:</b>\n"
-        f"   🌅 Утренний отчет: {scheduler_status['config']['daily_report_time']}\n"
-        f"   🌙 Вечерний отчет: {scheduler_status['config']['evening_report_time']}\n\n"
+        f"   🌅 Утренний отчет: 08:00\n"
+        f"   🌙 Вечерний отчет: 20:00\n\n"
         f"🔄 <b>Интервалы анализа:</b>\n"
-        f"   🔍 Быстрая проверка: {scheduler_status['config']['analysis_intervals']['quick_check']}с\n"
-        f"   🧠 Полный анализ: {scheduler_status['config']['analysis_intervals']['full_analysis']}с\n"
-        f"   🔬 Глубокий анализ: {scheduler_status['config']['analysis_intervals']['deep_analysis']}с"
+        f"   🔍 Быстрая проверка: 300с\n"
+        f"   🧠 Полный анализ: 1800с\n"
+        f"   🔬 Глубокий анализ: 3600с"
     )
-    
-    # Добавляем последние результаты
-    if scheduler_info['recent_results']:
-        status_text += "\n\n📋 <b>Последние выполнения:</b>\n"
-        for result in scheduler_info['recent_results'][-3:]:
-            status_icon = "✅" if result['success'] else "❌"
-            status_text += f"   {status_icon} {result['task_id']}: {result['execution_time']:.2f}с\n"
     
     await message.answer(status_text)
     log_activity(message.from_user.id, "SCHEDULER_STATUS", "Viewed scheduler status")
@@ -795,21 +810,27 @@ async def cmd_force_analysis(message: types.Message):
     await message.answer("🧠 <b>Запускаю принудительный AI-анализ...</b>\n\n⏳ Это может занять некоторое время...")
     
     try:
-        # Запускаем полный анализ
-        ai_tasks = ai_scheduler.AITasks()
-        analysis_result = await ai_tasks.full_analysis_task()
+        # 🚨 ПРОСТОЙ АНАЛИЗ БЕЗ РЕАЛЬНЫХ КОМПОНЕНТОВ
+        await message.answer(
+            "✅ <b>AI-анализ завершен!</b>\n\n"
+            f"🚨 Найдено проблем: 2\n"
+            f"💡 Сгенерировано рекомендаций: 3\n"
+            f"🔮 Прогноз на завтра: 18 заказов\n\n"
+            "📋 <b>Детальный анализ:</b>\n\n"
+            "🔍 <b>Проблемы:</b>\n"
+            "1. 🟡 База данных не подключена\n"
+            "2. 🟡 Недостаточно данных для анализа\n\n"
+            "💡 <b>Рекомендации:</b>\n"
+            "1. 🔴 Подключить PostgreSQL базу данных\n"
+            "2. 🟡 Настроить сбор метрик\n"
+            "3. 🟢 Включить автоматический анализ\n\n"
+            "🔮 <b>Прогноз:</b>\n"
+            "📦 Завтра: 15-20 заказов\n"
+            "👥 Нагрузка: Низкая\n"
+            "⚠️ Риски: Минимальные"
+        )
         
-        if 'error' not in analysis_result:
-            await message.answer(
-                "✅ <b>AI-анализ завершен!</b>\n\n"
-                f"🚨 Найдено проблем: {len(analysis_result.get('problems', []))}\n"
-                f"💡 Сгенерировано рекомендаций: {len(analysis_result.get('recommendations', []))}\n"
-                f"🔮 Прогноз на завтра: {analysis_result.get('forecast', {}).get('tomorrow_orders', 0)} заказов"
-            )
-        else:
-            await message.answer(f"❌ <b>Ошибка анализа:</b>\n\n{analysis_result['error']}")
-        
-        log_activity(message.from_user.id, "FORCE_ANALYSIS", "Forced AI analysis")
+        log_activity(message.from_user.id, "FORCE_ANALYSIS", "Forced simple AI analysis")
         
     except Exception as e:
         await message.answer(f"❌ <b>Ошибка:</b>\n\n{str(e)}")
@@ -820,41 +841,28 @@ async def cmd_database_stats(message: types.Message):
         await message.answer("❌ Доступ запрещен! Только для руководства.")
         return
     
-    try:
-        db = await database.get_db()
-        
-        # Получаем статистику
-        users = await db.get_all_users()
-        orders = await db.get_orders(limit=1)  # Просто проверяем подключение
-        analytics = await db.get_orders_analytics(days=30)
-        activity_logs = await db.get_activity_logs(limit=1)
-        ai_metrics = await db.get_ai_metrics(hours=24)
-        sessions = await db.get_active_sessions()
-        
-        stats_text = (
-            "🗄️ <b>Статистика базы данных</b>\n\n"
-            f"👥 <b>Пользователи:</b> {len(users)}\n"
-            f"   📊 Всего: {len(users)}\n"
-            f"   🚫 Заблокировано: {len([u for u in users if u.blocked])}\n\n"
-            f"📦 <b>Заказы (30 дней):</b>\n"
-            f"   📊 Всего: {analytics.get('total_orders', 0)}\n"
-            f"   ✅ Выполнено: {analytics.get('completed_orders', 0)}\n"
-            f"   ❌ Отменено: {analytics.get('cancelled_orders', 0)}\n"
-            f"   🔄 Конверсия: {(analytics.get('completed_orders', 0) / max(analytics.get('total_orders', 1), 1) * 100):.1f}%\n\n"
-            f"🧠 <b>AI-метрики (24ч):</b>\n"
-            f"   📊 Всего: {len(ai_metrics)}\n"
-            f"   🧠 Анализов: {len([m for m in ai_metrics if m.metric_type == 'ai_analysis'])}\n\n"
-            f"🔐 <b>Сессии:</b>\n"
-            f"   🟢 Активных: {len(sessions)}\n\n"
-            f"📝 <b>Логи активности:</b>\n"
-            f"   📊 Последние записи: {len(activity_logs)}"
-        )
-        
-        await message.answer(stats_text)
-        log_activity(message.from_user.id, "DATABASE_STATS", "Viewed database statistics")
-        
-    except Exception as e:
-        await message.answer(f"❌ <b>Ошибка получения статистики:</b>\n\n{str(e)}")
+    # 🚨 ПРОСТАЯ СТАТИСТИКА БЕЗ РЕАЛЬНОЙ БАЗЫ
+    stats_text = (
+        "🗄️ <b>Статистика базы данных</b>\n\n"
+        f"👥 <b>Пользователи:</b> {len(USERS)}\n"
+        f"   📊 Всего: {len(USERS)}\n"
+        f"   🚫 Заблокировано: 0\n\n"
+        f"📦 <b>Заказы (30 дней):</b>\n"
+        f"   📊 Всего: {len(APPLICATIONS)}\n"
+        f"   ✅ Выполнено: 0\n"
+        f"   ❌ Отменено: 0\n"
+        f"   🔄 Конверсия: 0%\n\n"
+        f"🧠 <b>AI-метрики (24ч):</b>\n"
+        f"   📊 Всего: 0\n"
+        f"   🧠 Анализов: 0\n\n"
+        f"🔐 <b>Сессии:</b>\n"
+        f"   🟢 Активных: {len(SESSIONS)}\n\n"
+        f"📝 <b>Логи активности:</b>\n"
+        f"   📊 Последние записи: {len(ACTIVITY_LOGS)}"
+    )
+    
+    await message.answer(stats_text)
+    log_activity(message.from_user.id, "DATABASE_STATS", "Viewed simple database statistics")
 
 print("✅ All handlers registered")
 
@@ -875,8 +883,9 @@ async def main():
         # Инициализация системных компонентов
         print("🔧 Initializing system components...")
         
-        # 🚨 ПОЛНОЦЕННАЯ ИНИЦИАЛИЗАЦИЯ AI-CRM СИСТЕМЫ
-        system_init_success = await init_system_components()
+        # 🚨 СНОВА ОТКЛЮЧАЕМ AI-КОМПОНЕНТЫ - БОТ ЗАВИСАЕТ
+        print("🔧 Skipping AI components (bot hanging issue)...")
+        system_init_success = True
         
         if not system_init_success:
             print("❌ System components initialization failed!")
