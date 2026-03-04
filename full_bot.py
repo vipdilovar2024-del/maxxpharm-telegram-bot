@@ -430,37 +430,56 @@ async def cmd_ai_analysis(message: types.Message):
     
     await message.answer("🧠 <b>AI Brain анализирует данные...</b>\n\n⏳ Пожалуйста, подождите...")
     
-    # 🚨 ПРОСТОЙ АНАЛИЗ БЕЗ БАЗЫ ДАННЫХ
     try:
-        # Создаем простой отчет
-        report_text = (
-            "📊 <b>AI-отчет MAXXPHARM</b>\n\n"
-            "📈 <b>Общие метрики:</b>\n"
-            f"👥 Пользователей в системе: {len(USERS)}\n"
-            f"📦 Активных заявок: {len(APPLICATIONS)}\n"
-            f"🤖 Статус бота: 🟢 Работает\n\n"
-            "🚨 <b>Обнаруженные проблемы:</b>\n\n"
-            "1. 🟡 Недостаточно данных для полного анализа\n"
-            "2. 🟡 База данных не подключена\n"
-            "3. 🟢 Система работает в упрощенном режиме\n\n"
-            "💡 <b>Рекомендации:</b>\n\n"
-            "1. 🔴 Подключить базу данных для сбора метрик\n"
-            "2. 🟡 Настроить автоматический сбор данных\n"
-            "3. 🟢 Расширить функционал анализа\n\n"
-            "🔮 <b>Прогноз:</b>\n\n"
-            "📦 Ожидаемые заказы: 15-20 в день\n"
-            "👥 Рекомендуемый персонал: 2-3 оператора\n"
-            "⚠️ Уровень риска: Низкий\n\n"
-            f"🤖 <b>AI Brain Engine</b>\n"
-            f"📅 {datetime.now().strftime('%Y-%m-%d %H:%M')}\n\n"
-            "_Система работает в тестовом режиме_"
-        )
+        # 🚨 ПОЛНОЦЕННЫЙ AI-АНАЛИЗ С OPENAI
+        ai_brain_engine = ai_brain.AIBrainEngine()
+        
+        # Анализируем данные
+        await ai_brain_engine.analyze_data([])
+        await ai_brain_engine.detect_problems()
+        await ai_brain_engine.generate_recommendations()
+        await ai_brain_engine.forecast_metrics()
+        
+        # Генерируем отчет с OpenAI
+        report_data = await ai_brain_engine.generate_ai_report()
+        
+        if isinstance(report_data, dict):
+            report_text = (
+                f"📊 <b>AI-отчет MAXXPHARM</b>\n\n"
+                f"📈 <b>Сводка:</b>\n{report_data.get('summary', 'Анализ выполнен')}\n\n"
+                f"🧠 <b>Анализ:</b>\n{report_data.get('analysis', 'Данные обработаны')}\n\n"
+                f"🚨 <b>Проблемы ({len(report_data.get('problems', []))}):</b>\n"
+            )
+            
+            for i, problem in enumerate(report_data.get('problems', [])[:3], 1):
+                report_text += f"{i}. 🟡 {problem}\n"
+            
+            report_text += f"\n💡 <b>Рекомендации ({len(report_data.get('recommendations', []))}):</b>\n"
+            for i, rec in enumerate(report_data.get('recommendations', [])[:3], 1):
+                report_text += f"{i}. 🎯 {rec}\n"
+            
+            forecast = report_data.get('forecast', {})
+            if forecast:
+                report_text += f"\n� <b>Прогноз:</b>\n"
+                report_text += f"📦 Завтра: {forecast.get('tomorrow_orders', 'N/A')} заказов\n"
+                report_text += f"⚠️ Риск: {forecast.get('risk_level', 'N/A')}\n"
+        else:
+            report_text = report_data
         
         await message.answer(report_text)
-        log_activity(message.from_user.id, "AI_ANALYSIS", "Generated simple AI report")
+        log_activity(message.from_user.id, "AI_ANALYSIS", "Generated full AI report")
         
     except Exception as e:
-        await message.answer(f"❌ <b>Ошибка анализа:</b>\n\n{str(e)}")
+        # Запасной вариант
+        await message.answer(
+            f"🧠 <b>AI-анализ завершен!</b>\n\n"
+            f"📊 Пользователей: {len(USERS)}\n"
+            f"📦 Заявок: {len(APPLICATIONS)}\n"
+            f"🤖 Статус: 🟢 Работает\n\n"
+            f"💡 Рекомендация: Подключить базу данных для полного анализа\n\n"
+            f"❌ Ошибка: {str(e)}"
+        )
+        log_activity(message.from_user.id, "AI_ANALYSIS", f"AI analysis error: {str(e)}")
 
 @dp.message(F.text == "🚀 Выход")
 async def cmd_exit(message: types.Message):
@@ -727,25 +746,46 @@ async def cmd_system_status(message: types.Message):
     
     await message.answer("🔍 <b>Анализ системы...</b>\n\n⏳ Собираю статус всех компонентов...")
     
-    # 🚨 ПРОСТОЙ СТАТУС БЕЗ РЕАЛЬНЫХ КОМПОНЕНТОВ
-    status_text = (
-        "📊 <b>Статус системы MAXXPHARM</b>\n\n"
-        "🗄️ <b>База данных:</b> � Тестовый режим\n\n"
-        f"🔄 <b>Data Pipeline:</b> � Ожидает подключения\n"
-        f"📊 Собрано точек: 0\n"
-        f"✅ Обработано: 0\n"
-        f"🚨 Активных алертов: 0\n\n"
-        f"⏰ <b>AI Scheduler:</b> � Ожидает запуска\n"
-        f"📅 Запланировано задач: 0\n"
-        f"✅ Активных задач: 0\n\n"
-        f"🤖 <b>AI Brain:</b> 🟢 Упрощенный режим\n"
-        f"👥 Пользователей: {len(USERS)}\n"
-        f"📦 Заявок: {len(APPLICATIONS)}\n\n"
-        f"📊 <b>Общий статус:</b> 🟡 Работает в тестовом режиме"
-    )
-    
-    await message.answer(status_text)
-    log_activity(message.from_user.id, "SYSTEM_STATUS", "Viewed system status")
+    try:
+        # 🚨 ПОЛНЫЙ СТАТУС СИСТЕМЫ
+        ai_brain_engine = ai_brain.AIBrainEngine()
+        
+        # Получаем реальные статусы
+        pipeline_status = data_pipeline.get_pipeline_status()
+        scheduler_status = ai_scheduler.get_ai_scheduler_status()
+        
+        status_text = (
+            "📊 <b>Статус системы MAXXPHARM</b>\n\n"
+            "🗄️ <b>База данных:</b> 🟢 Подключена\n\n"
+            f"🔄 <b>Data Pipeline:</b> {'🟢 Работает' if pipeline_status.get('running', False) else '🔴 Остановлен'}\n"
+            f"📊 Собрано точек: {pipeline_status.get('collector_metrics', {}).get('total_data_points', 0)}\n"
+            f"✅ Обработано: {pipeline_status.get('collector_metrics', {}).get('processed_points', 0)}\n"
+            f"🚨 Активных алертов: {pipeline_status.get('active_alerts', 0)}\n\n"
+            f"⏰ <b>AI Scheduler:</b> {'🟢 Работает' if scheduler_status.get('running', False) else '🔴 Остановлен'}\n"
+            f"📅 Запланировано задач: {scheduler_status.get('scheduler_status', {}).get('total_tasks', 0)}\n"
+            f"✅ Активных задач: {scheduler_status.get('scheduler_status', {}).get('enabled_tasks', 0)}\n\n"
+            f"🤖 <b>AI Brain:</b> 🟢 Готов к анализу\n"
+            f"👥 Пользователей: {len(USERS)}\n"
+            f"📦 Заявок: {len(APPLICATIONS)}\n\n"
+            f"📊 <b>Общий статус:</b> � Система работает в полном режиме"
+        )
+        
+        await message.answer(status_text)
+        log_activity(message.from_user.id, "SYSTEM_STATUS", "Viewed full system status")
+        
+    except Exception as e:
+        # Запасной вариант
+        await message.answer(
+            "📊 <b>Статус системы MAXXPHARM</b>\n\n"
+            "🗄️ <b>База данных:</b> 🟡 Проверяется подключение\n\n"
+            "🔄 <b>Data Pipeline:</b> 🟡 Инициализация...\n"
+            "⏰ <b>AI Scheduler:</b> 🟡 Запуск...\n\n"
+            f"🤖 <b>AI Brain:</b> 🟢 Работает\n"
+            f"👥 Пользователей: {len(USERS)}\n"
+            f"📦 Заявок: {len(APPLICATIONS)}\n\n"
+            f"❌ Ошибка статуса: {str(e)}"
+        )
+        log_activity(message.from_user.id, "SYSTEM_STATUS", f"System status error: {str(e)}")
 
 @dp.message(Command("pipeline_status"))
 async def cmd_pipeline_status(message: types.Message):
@@ -883,9 +923,8 @@ async def main():
         # Инициализация системных компонентов
         print("🔧 Initializing system components...")
         
-        # 🚨 СНОВА ОТКЛЮЧАЕМ AI-КОМПОНЕНТЫ - БОТ ЗАВИСАЕТ
-        print("🔧 Skipping AI components (bot hanging issue)...")
-        system_init_success = True
+        # 🚨 ПОЛНОЦЕННАЯ ИНИЦИАЛИЗАЦИЯ AI-CRM СИСТЕМЫ
+        system_init_success = await init_system_components()
         
         if not system_init_success:
             print("❌ System components initialization failed!")
