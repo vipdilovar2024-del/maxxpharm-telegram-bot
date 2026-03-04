@@ -200,7 +200,10 @@ def get_client_applications(client_id: int) -> List[Dict]:
 # 🎹 Клавиатуры
 def get_main_menu(user_id):
     """Получение главного меню"""
+    print(f"🔥 get_main_menu called for user_id: {user_id}")
+    
     role = get_user_role(user_id)
+    print(f"🔥 User role: {role}")
     
     if role == UserRole.SUPER_ADMIN:
         keyboard = ReplyKeyboardMarkup(
@@ -289,6 +292,7 @@ def get_main_menu(user_id):
             resize_keyboard=True
         )
     
+    print(f"🔥 Menu created for role {role}")
     return keyboard
 
 def get_client_registration_menu():
@@ -381,7 +385,9 @@ async def cmd_start(message: types.Message):
         welcome_text = "Добро пожаловать в MAXXPHARM! 🏥\n\nВыберите действие из меню:"
     
     menu = get_main_menu(user_id)
+    print(f"🔥 Sending menu to user {user_id}")
     await message.answer(welcome_text, reply_markup=menu)
+    print(f"🔥 Menu sent successfully!")
     log_activity(user_id, "START", "User started bot")
 
 # 🎹 Обработчики кнопок главного меню
