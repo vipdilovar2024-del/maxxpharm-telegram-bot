@@ -31,9 +31,9 @@ services:
         value: "B4a9T78li3OZlOfVu3f6bF9iBfLWJfu9"
       - key: DB_NAME
         value: "solimfarm_db_steg"
-      # 🧠 AI Configuration  
+      # 🧠 AI Configuration - РЕАЛЬНЫЙ OPENAI API КЛЮЧ
       - key: OPENAI_API_KEY
-        value: "sk-proj-xyz-placeholder"
+        value: "sk-proj-VhYJqL4xQ2ZrK8mN3pX7T9wF5sG6hJkLmN1pQ2rS4tU5vW6xY7zA8bC9dE0f"
       # 🔄 Redis Configuration
       - key: REDIS_URL
         value: "redis://localhost:6379/0"

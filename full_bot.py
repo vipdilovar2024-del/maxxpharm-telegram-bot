@@ -28,6 +28,7 @@ from aiogram.fsm.storage.memory import MemoryStorage
 # 🗄️ Database imports
 import asyncpg
 from asyncpg import Connection
+import database
 
 # 🧠 AI Brain imports
 import ai_brain
@@ -668,12 +669,7 @@ async def handle_text_message(message: types.Message):
             # Обычное сообщение
             await message.answer("📝 Используйте меню для создания заявки или выберите действие из главного меню.")
 
-# 🗄️ DATABASE INTEGRATION
-import database
-import data_pipeline
-import ai_scheduler
-
-# 🔄 Инициализация базы данных при старте
+#  Инициализация базы данных при старте
 async def init_system_components():
     """Инициализация всех компонентов системы"""
     try:
@@ -879,12 +875,8 @@ async def main():
         # Инициализация системных компонентов
         print("🔧 Initializing system components...")
         
-        # 🚨 ВРЕМЕННО ОТКЛЮЧАЕМ СИСТЕМНЫЕ КОМПОНЕНТЫ ДЛЯ RENDER
-        if RENDER:
-            print("🔧 Skipping system components (Render mode)...")
-            system_init_success = True
-        else:
-            system_init_success = await init_system_components()
+        # 🚨 ПОЛНОЦЕННАЯ ИНИЦИАЛИЗАЦИЯ AI-CRM СИСТЕМЫ
+        system_init_success = await init_system_components()
         
         if not system_init_success:
             print("❌ System components initialization failed!")

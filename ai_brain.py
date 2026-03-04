@@ -4,10 +4,15 @@
 import asyncio
 import json
 import datetime
+import os
 from typing import Dict, List, Any, Optional
 from dataclasses import dataclass
 from collections import defaultdict, deque
 import statistics
+
+# 🤖 OpenAI для реального AI
+import openai
+from openai import AsyncOpenAI
 
 # ================================
 # 📊 БАЗА ДАННЫХ ДЛЯ AI
@@ -53,22 +58,31 @@ class SystemMetrics:
 # ================================
 
 class AIBrainEngine:
-    """Основной AI-движок для анализа и принятия решений"""
+    """AI-движок для анализа бизнес-процессов"""
     
     def __init__(self):
-        self.orders: List[OrderMetrics] = []
-        self.operators: Dict[int, OperatorMetrics] = {}
-        self.system_metrics: Optional[SystemMetrics] = None
-        self.problems_detected: List[Dict] = []
-        self.recommendations: List[Dict] = []
-        self.forecasts: Dict[str, Any] = {}
+        self.orders = []
+        self.operators = []
+        self.system_metrics = None
+        self.problems_detected = []
+        self.recommendations = []
+        self.forecasts = {}
         
-        # Пороговые значения для детекции проблем
+        # 🤖 OpenAI клиент
+        openai_api_key = os.getenv("OPENAI_API_KEY", "")
+        if openai_api_key:
+            self.openai_client = AsyncOpenAI(api_key=openai_api_key)
+            print("🧠 OpenAI клиент инициализирован")
+        else:
+            self.openai_client = None
+            print("⚠️ OpenAI API ключ не найден")
+        
+        # Пороги для алертов
         self.thresholds = {
-            'cancel_rate_max': 0.20,  # 20%
-            'delivery_time_max': 90,   # 90 минут
-            'operator_load_max': 40,   # 40 заявок
-            'conversion_rate_min': 0.85 # 85%
+            'cancel_rate_max': 0.15,  # 15% отмен
+            'avg_delivery_time_max': 90,  # 90 минут
+            'operator_load_max': 10,  # 10 заказов на оператора
+            'conversion_rate_min': 0.85  # 85% конверсия
         }
     
     async def analyze_data(self, orders_data: List[Dict]) -> SystemMetrics:
@@ -297,6 +311,92 @@ class AIBrainEngine:
         self.forecasts = forecast
         print(f"🔮 AI: Прогноз на завтра - {tomorrow_orders} заказов")
         return forecast
+    
+    async def generate_ai_report(self) -> Dict[str, Any]:
+        """Генерация полного AI-отчета с использованием OpenAI"""
+        print("🧠 AI: Генерирую отчет с помощью OpenAI...")
+        
+        if not self.openai_client:
+            return await self.generate_fallback_report()
+        
+        try:
+            # Собираем данные для анализа
+            context_data = {
+                'total_orders': self.system_metrics.total_orders if self.system_metrics else 0,
+                'completed_orders': self.system_metrics.completed_orders if self.system_metrics else 0,
+                'cancelled_orders': self.system_metrics.cancelled_orders if self.system_metrics else 0,
+                'conversion_rate': self.system_metrics.conversion_rate if self.system_metrics else 0,
+                'avg_delivery_time': self.system_metrics.avg_delivery_time if self.system_metrics else 0,
+                'problems_count': len(self.problems_detected),
+                'recommendations_count': len(self.recommendations)
+            }
+            
+            # Формируем промпт для OpenAI
+            prompt = f"""
+            Проанализируй данные CRM системы MAXXPHARM и составь подробный отчет для директора:
+            
+            Данные:
+            - Всего заказов: {context_data['total_orders']}
+            - Выполнено заказов: {context_data['completed_orders']}
+            - Отменено заказов: {context_data['cancelled_orders']}
+            - Конверсия: {context_data['conversion_rate']:.2%}
+            - Среднее время доставки: {context_data['avg_delivery_time']} минут
+            - Найдено проблем: {context_data['problems_count']}
+            - Сгенерировано рекомендаций: {context_data['recommendations_count']}
+            
+            Проблемы: {[p['description'] for p in self.problems_detected]}
+            
+            Составь структурированный отчет с:
+            1. Краткая сводка
+            2. Анализ ключевых метрик
+            3. Выявленные проблемы
+            4. Рекомендации
+            5. Прогноз на завтра
+            
+            Ответ в формате JSON с полями: summary, analysis, problems, recommendations, forecast
+            """
+            
+            response = await self.openai_client.chat.completions.create(
+                model="gpt-3.5-turbo",
+                messages=[
+                    {"role": "system", "content": "Ты - бизнес-аналитик CRM системы. Анализируй данные и давай практические рекомендации."},
+                    {"role": "user", "content": prompt}
+                ],
+                max_tokens=1000,
+                temperature=0.3
+            )
+            
+            ai_response = response.choices[0].message.content
+            
+            # Пытаемся распарсить JSON
+            try:
+                report_data = json.loads(ai_response)
+                return report_data
+            except:
+                # Если не удалось распарсить, возвращаем текстовый отчет
+                return {
+                    'summary': ai_response[:200] + "...",
+                    'analysis': ai_response,
+                    'problems': [p['description'] for p in self.problems_detected],
+                    'recommendations': [r['action'] for r in self.recommendations],
+                    'forecast': self.forecasts
+                }
+                
+        except Exception as e:
+            print(f"❌ Ошибка OpenAI: {e}")
+            return await self.generate_fallback_report()
+    
+    async def generate_fallback_report(self) -> Dict[str, Any]:
+        """Запасной вариант генерации отчета без OpenAI"""
+        print("🧠 AI: Использую локальный анализ...")
+        
+        return {
+            'summary': f"Обработано {self.system_metrics.total_orders if self.system_metrics else 0} заказов",
+            'analysis': f"Конверсия {self.system_metrics.conversion_rate:.2%} если есть данные" if self.system_metrics else "Недостаточно данных",
+            'problems': [p['description'] for p in self.problems_detected],
+            'recommendations': [r['action'] for r in self.recommendations],
+            'forecast': self.forecasts
+        }
     
     async def generate_report(self) -> str:
         """Генерация AI-отчета"""
