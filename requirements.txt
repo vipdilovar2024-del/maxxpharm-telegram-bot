@@ -1,2 +1,75 @@
+# 📦 MAXXPHARM AI-CRM BOT REQUIREMENTS
+# Основные зависимости для Telegram бота с AI-анализом
+
+# 🤖 Telegram Bot Framework
 aiogram==3.4.1
+aiohttp==3.9.1
+
+# 🗄️ Database
+asyncpg==0.29.0
+psycopg2-binary==2.9.9
+
+# 🧠 AI & Machine Learning
+openai==1.6.1
+scikit-learn==1.4.0
+numpy==1.26.2
+pandas==2.1.4
+
+# 📊 Data Processing & Analytics
+python-dateutil==2.8.2
+pytz==2023.3
+
+# 🔄 Task Scheduling & Async
+celery==5.3.4
+redis==5.0.1
+asyncio-mqtt==0.16.1
+
+# 📡 API & Web
+fastapi==0.104.1
+uvicorn==0.24.0
+pydantic==2.5.2
+
+# 🔐 Security & Cryptography
+cryptography==41.0.8
+passlib==1.7.4
+
+# 📝 Logging & Monitoring
+loguru==0.7.2
+prometheus-client==0.19.0
+
+# 🌐 HTTP & Network
+httpx==0.25.2
 aiofiles==23.2.1
+
+# 🧪 Development & Testing
+pytest==7.4.3
+pytest-asyncio==0.21.1
+black==23.11.0
+flake8==6.1.0
+
+# 📦 System & Utilities
+python-dotenv==1.0.0
+schedule==1.2.0
+APScheduler==3.10.4
+
+# 🎯 Additional AI Libraries
+transformers==4.36.0
+torch==2.1.1
+sentencepiece==0.1.99
+
+# 📊 Data Visualization (optional)
+matplotlib==3.8.2
+seaborn==0.13.0
+plotly==5.17.0
+
+# 🔧 Configuration Management
+pydantic-settings==2.1.0
+pyyaml==6.0.1
+
+# 📱 Additional Telegram Features
+aiogram-dialog==2.1.0
+aiogram-i18n==0.2.0
+
+# 🌍 Environment & Deployment
+gunicorn==21.2.0
+docker==6.1.3
