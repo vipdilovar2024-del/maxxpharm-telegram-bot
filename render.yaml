@@ -5,7 +5,7 @@ services:
     env: python
     plan: free
     buildCommand: "pip install --no-cache-dir -r requirements.txt"
-    startCommand: "python full_bot.py"
+    startCommand: "python debug_bot.py"
     healthCheck:
       enabled: false
     autoDeploy: true
