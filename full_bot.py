@@ -40,13 +40,34 @@ BOT_RUNNING = False
 
 print("✅ Imports loaded successfully")
 
-# Role system
+# Role system - ОБНОВЛЕНО по ТЗ
 class UserRole:
-    SUPER_ADMIN = "SUPER_ADMIN"
-    ADMIN = "ADMIN"
-    MANAGER = "MANAGER"
-    COURIER = "COURIER"
-    CLIENT = "CLIENT"
+    DIRECTOR = "DIRECTOR"           # Директор - полный просмотр системы
+    OPERATOR = "OPERATOR"           # Оператор - работа с заявками
+    COLLECTOR = "COLLECTOR"         # Сборщик - сборка заказов
+    INSPECTOR = "INSPECTOR"         # Проверщик - контроль качества
+    COURIER = "COURIER"             # Курьер - доставка
+    ADMIN = "ADMIN"                 # Администратор - полный доступ
+    SUPER_ADMIN = "SUPER_ADMIN"       # Super Admin - полный доступ
+    CLIENT = "CLIENT"               # Клиент - базовый доступ
+
+# Order statuses - СТАТУСЫ ЗАЯВОК по ТЗ
+class OrderStatus:
+    NEW = "Новая"                  # Новая
+    PROCESSING = "В обработке"      # В обработке
+    COLLECTING = "Собирается"       # Собирается
+    DELIVERING = "Доставляется"      # Доставляется
+    COMPLETED = "Выполнена"         # Выполнена
+    CANCELLED = "Отменена"          # Отменена
+
+# Session management
+SESSIONS = {}  # {user_id: {"role": str, "expires": datetime, "active": bool}}
+
+# Activity logs
+ACTIVITY_LOGS = []  # [{"user_id": int, "action": str, "timestamp": str, "details": str}]
+
+# Order applications (заявки)
+APPLICATIONS = []  # [{"id": int, "client_id": int, "status": str, "date": str, "total": float, "items": []}]
 
 # Database
 USERS = {}
@@ -63,58 +84,127 @@ PRODUCTS = [
 CATEGORIES = ["Обезболивающие", "Витамины", "Антибиотики", "Противовирусные"]
 ORDERS = []
 
-# User management
+# User management - ОБНОВЛЕНО по ТЗ
 def get_user_role(user_id):
     if user_id == ADMIN_ID:
         return UserRole.SUPER_ADMIN
+    
+    # Проверяем сессию
+    if user_id in SESSIONS and SESSIONS[user_id].get("active", False):
+        return SESSIONS[user_id].get("role", UserRole.CLIENT)
+    
     return USERS.get(user_id, {}).get("role", UserRole.CLIENT)
 
 def is_admin(user_id):
-    return get_user_role(user_id) in [UserRole.SUPER_ADMIN, UserRole.ADMIN]
+    return get_user_role(user_id) in [UserRole.SUPER_ADMIN, UserRole.ADMIN, UserRole.DIRECTOR]
 
-def is_manager(user_id):
-    return get_user_role(user_id) in [UserRole.SUPER_ADMIN, UserRole.ADMIN, UserRole.MANAGER]
+def is_director(user_id):
+    return get_user_role(user_id) in [UserRole.SUPER_ADMIN, UserRole.DIRECTOR]
 
-# Keyboards - ИСПРАВЛЕНО для aiogram 3.4.1
+def can_manage_orders(user_id):
+    return get_user_role(user_id) in [UserRole.SUPER_ADMIN, UserRole.ADMIN, UserRole.DIRECTOR, UserRole.OPERATOR]
+
+def can_collect_orders(user_id):
+    return get_user_role(user_id) in [UserRole.SUPER_ADMIN, UserRole.ADMIN, UserRole.DIRECTOR, UserRole.COLLECTOR]
+
+def can_inspect_orders(user_id):
+    return get_user_role(user_id) in [UserRole.SUPER_ADMIN, UserRole.ADMIN, UserRole.DIRECTOR, UserRole.INSPECTOR]
+
+def can_deliver_orders(user_id):
+    return get_user_role(user_id) in [UserRole.SUPER_ADMIN, UserRole.ADMIN, UserRole.DIRECTOR, UserRole.COURIER]
+
+def log_activity(user_id, action, details=""):
+    """Логирование действий"""
+    import datetime
+    log_entry = {
+        "user_id": user_id,
+        "action": action,
+        "timestamp": datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+        "details": details
+    }
+    ACTIVITY_LOGS.append(log_entry)
+    print(f"📝 LOG: {action} by {user_id} - {details}")
+
+def create_session(user_id, role):
+    """Создание сессии"""
+    import datetime
+    expires = datetime.datetime.now() + datetime.timedelta(hours=24)
+    SESSIONS[user_id] = {
+        "role": role,
+        "expires": expires.strftime("%Y-%m-%d %H:%M:%S"),
+        "active": True
+    }
+    log_activity(user_id, "SESSION_CREATED", f"Role: {role}")
+
+def check_session(user_id):
+    """Проверка сессии"""
+    if user_id not in SESSIONS:
+        return False
+    
+    import datetime
+    session = SESSIONS[user_id]
+    expires = datetime.datetime.strptime(session["expires"], "%Y-%m-%d %H:%M:%S")
+    
+    if datetime.datetime.now() > expires:
+        session["active"] = False
+        return False
+    
+    return session["active"]
+
+# Keyboards - ОБНОВЛЕНО по ТЗ
 def get_main_menu(user_id):
     role = get_user_role(user_id)
     
-    if role == UserRole.SUPER_ADMIN:
+    if role in [UserRole.SUPER_ADMIN, UserRole.ADMIN, UserRole.DIRECTOR]:
+        # Меню для руководства
         keyboard = ReplyKeyboardMarkup(
             keyboard=[
-                [KeyboardButton(text="📊 Статистика")],
-                [KeyboardButton(text="📦 Заказы"), KeyboardButton(text="👥 Пользователи")],
-                [KeyboardButton(text="🧾 Товары"), KeyboardButton(text="🏷 Категории")],
-                [KeyboardButton(text="🏪 Склад"), KeyboardButton(text="⚙ Настройки")],
-                [KeyboardButton(text="📝 Логи"), KeyboardButton(text="🚀 Выход")]
+                [KeyboardButton(text="📊 Все заявки")],
+                [KeyboardButton(text="� Аналитика"), KeyboardButton(text="👥 Пользователи и роли")],
+                [KeyboardButton(text="📜 История действий"), KeyboardButton(text="⚙ Настройки системы")],
+                [KeyboardButton(text="🔗 Интеграция 1С"), KeyboardButton(text="📦 Управление статусами")],
+                [KeyboardButton(text="📢 Рассылки"), KeyboardButton(text="🗄 Архив")],
+                [KeyboardButton(text="� Управление админами"), KeyboardButton(text="� Выйти")]
             ],
             resize_keyboard=True
         )
-    elif role == UserRole.ADMIN:
+    elif role == UserRole.OPERATOR:
+        # Меню для оператора
         keyboard = ReplyKeyboardMarkup(
             keyboard=[
-                [KeyboardButton(text="📊 Статистика")],
-                [KeyboardButton(text="📦 Заказы"), KeyboardButton(text="👥 Пользователи")],
-                [KeyboardButton(text="🧾 Товары"), KeyboardButton(text="🏪 Склад")],
-                [KeyboardButton(text="🚀 Выход")]
+                [KeyboardButton(text="📊 Все заявки")],
+                [KeyboardButton(text="📈 Моя статистика"), KeyboardButton(text="📜 История действий")],
+                [KeyboardButton(text="� Выйти")]
             ],
             resize_keyboard=True
         )
-    elif role == UserRole.MANAGER:
+    elif role == UserRole.COLLECTOR:
+        # Меню для сборщика
         keyboard = ReplyKeyboardMarkup(
             keyboard=[
-                [KeyboardButton(text="📊 Статистика")],
-                [KeyboardButton(text="📦 Заказы"), KeyboardButton(text="🧾 Товары")],
-                [KeyboardButton(text="🚀 Выход")]
+                [KeyboardButton(text="� Мои сборки")],
+                [KeyboardButton(text="📈 Моя статистика"), KeyboardButton(text="📜 История действий")],
+                [KeyboardButton(text="� Выйти")]
+            ],
+            resize_keyboard=True
+        )
+    elif role == UserRole.INSPECTOR:
+        # Меню для проверщика
+        keyboard = ReplyKeyboardMarkup(
+            keyboard=[
+                [KeyboardButton(text="� Проверка качества")],
+                [KeyboardButton(text="� Моя статистика"), KeyboardButton(text="📜 История действий")],
+                [KeyboardButton(text="� Выйти")]
             ],
             resize_keyboard=True
         )
     elif role == UserRole.COURIER:
+        # Меню для курьера
         keyboard = ReplyKeyboardMarkup(
             keyboard=[
-                [KeyboardButton(text="📦 Мои доставки")],
-                [KeyboardButton(text="🗺 Карта"), KeyboardButton(text="📞 Поддержка")],
-                [KeyboardButton(text="🚀 Выход")]
+                [KeyboardButton(text="� Мои доставки")],
+                [KeyboardButton(text="� Моя статистика"), KeyboardButton(text="� История действий")],
+                [KeyboardButton(text="🗺 Карта"), KeyboardButton(text="� Выйти")]
             ],
             resize_keyboard=True
         )
@@ -129,6 +219,92 @@ def get_main_menu(user_id):
         )
     
     return keyboard
+
+def get_admin_menu_keyboard():
+    """Клавиатура для меню управления пользователями"""
+    return InlineKeyboardMarkup(inline_keyboard=[
+        [
+            InlineKeyboardButton(text="➕ Добавить пользователя", callback_data="admin_add_user"),
+            InlineKeyboardButton(text="📋 Список пользователей", callback_data="admin_list_users")
+        ],
+        [
+            InlineKeyboardButton(text="🔑 Изменить роли", callback_data="admin_change_roles"),
+            InlineKeyboardButton(text="🚫 Заблокировать", callback_data="admin_block_user")
+        ],
+        [
+            InlineKeyboardButton(text="📊 Активность", callback_data="admin_activity"),
+            InlineKeyboardButton(text="🔙 Назад", callback_data="admin_back_main")
+        ]
+    ])
+
+def get_role_selection_keyboard_tz(user_id: int, action: str) -> InlineKeyboardMarkup:
+    """Клавиатура выбора роли по ТЗ"""
+    keyboard = InlineKeyboardMarkup(inline_keyboard=[
+        [
+            InlineKeyboardButton(
+                text="🧑‍💼 Директор", 
+                callback_data=f"role_{action}_{user_id}_{UserRole.DIRECTOR}"
+            ),
+            InlineKeyboardButton(
+                text="📞 Оператор", 
+                callback_data=f"role_{action}_{user_id}_{UserRole.OPERATOR}"
+            )
+        ],
+        [
+            InlineKeyboardButton(
+                text="📦 Сборщик", 
+                callback_data=f"role_{action}_{user_id}_{UserRole.COLLECTOR}"
+            ),
+            InlineKeyboardButton(
+                text="🔍 Проверщик", 
+                callback_data=f"role_{action}_{user_id}_{UserRole.INSPECTOR}"
+            )
+        ],
+        [
+            InlineKeyboardButton(
+                text="🚚 Курьер", 
+                callback_data=f"role_{action}_{user_id}_{UserRole.COURIER}"
+            ),
+            InlineKeyboardButton(
+                text="👑 Администратор", 
+                callback_data=f"role_{action}_{user_id}_{UserRole.ADMIN}"
+            )
+        ],
+        [
+            InlineKeyboardButton(text="❌ Отмена", callback_data="admin_cancel")
+        ]
+    ])
+    return keyboard
+
+def get_applications_keyboard():
+    """Клавиатура для управления заявками"""
+    return InlineKeyboardMarkup(inline_keyboard=[
+        [
+            InlineKeyboardButton(text="➕ Создать заявку", callback_data="app_create"),
+            InlineKeyboardButton(text="🔍 Найти заявку", callback_data="app_search")
+        ],
+        [
+            InlineKeyboardButton(text="📊 Фильтры", callback_data="app_filters"),
+            InlineKeyboardButton(text="🔙 Назад", callback_data="admin_back_main")
+        ]
+    ])
+
+def get_analytics_keyboard():
+    """Клавиатура для аналитики"""
+    return InlineKeyboardMarkup(inline_keyboard=[
+        [
+            InlineKeyboardButton(text="📊 За день", callback_data="analytics_day"),
+            InlineKeyboardButton(text="📊 За неделю", callback_data="analytics_week")
+        ],
+        [
+            InlineKeyboardButton(text="📊 За месяц", callback_data="analytics_month"),
+            InlineKeyboardButton(text="📊 За все время", callback_data="analytics_all")
+        ],
+        [
+            InlineKeyboardButton(text="🏆 Топ операторы", callback_data="analytics_top"),
+            InlineKeyboardButton(text="🔙 Назад", callback_data="admin_back_main")
+        ]
+    ])
 
 def get_categories_keyboard():
     keyboard = InlineKeyboardMarkup(inline_keyboard=[])
@@ -181,7 +357,7 @@ dp = Dispatcher()
 # 🎯 ПРОВЕРКА РЕГИСТРАЦИИ HANDLERS
 print("🔧 Registering handlers...")
 
-# Handlers
+# Handlers - ОБНОВЛЕНО по ТЗ
 @dp.message(Command("start"))
 async def cmd_start(message: types.Message):
     print(f"🎯 START HANDLER CALLED by {message.from_user.full_name} (ID: {message.from_user.id})")
@@ -199,42 +375,66 @@ async def cmd_start(message: types.Message):
             "cart": [],
             "orders": [],
             "phone": None,
-            "address": None
+            "address": None,
+            "blocked": False
         }
         print(f"✅ User {user_id} initialized")
     
-    # Welcome message based on role
-    if role == UserRole.SUPER_ADMIN:
+    # Create session for admin users
+    if role in [UserRole.SUPER_ADMIN, UserRole.ADMIN, UserRole.DIRECTOR]:
+        create_session(user_id, role)
+        session_info = SESSIONS.get(user_id, {})
+        expires = session_info.get("expires", "Неизвестно")
+        
         welcome_text = (
-            f"👑 <b>Добро пожаловать, {message.from_user.full_name}!</b>\n\n"
-            "🚀 <b>MAXXPHARM Super Admin Panel</b>\n\n"
-            "📊 Вы вошли как Super Admin\n"
-            "🔧 Полный доступ ко всем функциям\n\n"
-            "Выберите действие в меню:"
+            f"� Добро пожаловать, {message.from_user.full_name}!\n\n"
+            f"� Ваша роль: {role}\n"
+            f"⏰ Сессия активна до: {expires}\n\n"
+            f"Выберите действие из меню ниже:"
         )
-    elif role == UserRole.ADMIN:
+    elif role == UserRole.OPERATOR:
+        create_session(user_id, role)
+        session_info = SESSIONS.get(user_id, {})
+        expires = session_info.get("expires", "Неизвестно")
+        
         welcome_text = (
-            f"👨‍💼 <b>Добро пожаловать, {message.from_user.full_name}!</b>\n\n"
-            "🚀 <b>MAXXPHARM Admin Panel</b>\n\n"
-            "📊 Вы вошли как Admin\n"
-            "🔧 Доступ к управлению системой\n\n"
-            "Выберите действие в меню:"
+            f"� Добро пожаловать, {message.from_user.full_name}!\n\n"
+            f"� Ваша роль: ОПЕРАТОР\n"
+            f"⏰ Сессия активна до: {expires}\n\n"
+            f"Выберите действие из меню ниже:"
         )
-    elif role == UserRole.MANAGER:
+    elif role == UserRole.COLLECTOR:
+        create_session(user_id, role)
+        session_info = SESSIONS.get(user_id, {})
+        expires = session_info.get("expires", "Неизвестно")
+        
         welcome_text = (
-            f"👨‍💼 <b>Добро пожаловать, {message.from_user.full_name}!</b>\n\n"
-            "🚀 <b>MAXXPHARM Manager Panel</b>\n\n"
-            "📊 Вы вошли как Manager\n"
-            "🔧 Управление заказами и товарами\n\n"
-            "Выберите действие в меню:"
+            f"� Добро пожаловать, {message.from_user.full_name}!\n\n"
+            f"� Ваша роль: СБОРЩИК\n"
+            f"⏰ Сессия активна до: {expires}\n\n"
+            f"Выберите действие из меню ниже:"
+        )
+    elif role == UserRole.INSPECTOR:
+        create_session(user_id, role)
+        session_info = SESSIONS.get(user_id, {})
+        expires = session_info.get("expires", "Неизвестно")
+        
+        welcome_text = (
+            f"� Добро пожаловать, {message.from_user.full_name}!\n\n"
+            f"� Ваша роль: ПРОВЕРЩИК\n"
+            f"⏰ Сессия активна до: {expires}\n\n"
+            f"Выберите действие из меню ниже:"
         )
     elif role == UserRole.COURIER:
+        create_session(user_id, role)
+        session_info = SESSIONS.get(user_id, {})
+        expires = session_info.get("expires", "Неизвестно")
+        
         welcome_text = (
-            f"🚚 <b>Добро пожаловать, {message.from_user.full_name}!</b>\n\n"
-            "🚀 <b>MAXXPHARM Courier Panel</b>\n\n"
-            "📦 Вы вошли как Courier\n"
-            "🚚 Управление доставками\n\n"
-            "Выберите действие в меню:"
+            f"� Добро пожаловать, {message.from_user.full_name}!\n\n"
+            f"� Ваша роль: КУРЬЕР\n"
+            f"⏰ Сессия активна до: {expires}\n\n"
+            f"Выберите действие из меню ниже:"
         )
     else:  # CLIENT
         welcome_text = (
@@ -251,8 +451,129 @@ async def cmd_start(message: types.Message):
     print(f"📱 Menu generated for role {role}")
     
     await message.answer(welcome_text, reply_markup=menu)
+    log_activity(user_id, "START", f"Role: {role}")
     logger.info(f"User {user_id} ({role}) started bot")
     print(f"✅ Start message sent with menu to {message.from_user.full_name}")
+
+# 📊 Все заявки - НОВЫЙ МОДУЛЬ
+@dp.message(F.text == "📊 Все заявки")
+async def cmd_applications(message: types.Message):
+    if not can_manage_orders(message.from_user.id):
+        await message.answer("❌ Доступ запрещен!")
+        return
+    
+    if not APPLICATIONS:
+        await message.answer(
+            "📊 <b>Все заявки</b>\n\n"
+            "📝 Заявок пока нет",
+            reply_markup=get_applications_keyboard()
+        )
+        return
+    
+    apps_text = "📊 <b>Все заявки:</b>\n\n"
+    
+    for app in APPLICATIONS:
+        user = USERS.get(app['client_id'], {})
+        apps_text += f"🆔 ID: {app['id']}\n"
+        apps_text += f"👤 Клиент: {user.get('full_name', 'Unknown')}\n"
+        apps_text += f"📊 Статус: {app['status']}\n"
+        apps_text += f"📅 Дата: {app['date']}\n"
+        apps_text += f"💰 Сумма: {app['total']}₽\n\n"
+    
+    await message.answer(apps_text, reply_markup=get_applications_keyboard())
+    log_activity(message.from_user.id, "VIEW_APPLICATIONS", "Viewed all applications")
+
+# 📈 Аналитика - НОВЫЙ МОДУЛЬ
+@dp.message(F.text == "📈 Аналитика")
+async def cmd_analytics(message: types.Message):
+    if not is_director(message.from_user.id):
+        await message.answer("❌ Доступ запрещен!")
+        return
+    
+    total_apps = len(APPLICATIONS)
+    completed = len([a for a in APPLICATIONS if a['status'] == OrderStatus.COMPLETED])
+    in_progress = len([a for a in APPLICATIONS if a['status'] in [OrderStatus.PROCESSING, OrderStatus.COLLECTING, OrderStatus.DELIVERING]])
+    cancelled = len([a for a in APPLICATIONS if a['status'] == OrderStatus.CANCELLED])
+    
+    avg_check = sum([a['total'] for a in APPLICATIONS]) / len(APPLICATIONS) if APPLICATIONS else 0
+    
+    analytics_text = (
+        f"📈 <b>Аналитика MAXXPHARM</b>\n\n"
+        f"📊 Количество заявок: {total_apps}\n"
+        f"✅ Выполнено: {completed}\n"
+        f"⏳ В работе: {in_progress}\n"
+        f"❌ Отменено: {cancelled}\n"
+        f"💰 Средний чек: {avg_check:.2f}₽\n\n"
+        f"📊 Выберите период:"
+    )
+    
+    await message.answer(analytics_text, reply_markup=get_analytics_keyboard())
+    log_activity(message.from_user.id, "VIEW_ANALYTICS", "Viewed analytics")
+
+# 👥 Пользователи и роли - НОВЫЙ МОДУЛЬ
+@dp.message(F.text == "👥 Пользователи и роли")
+async def cmd_users_roles(message: types.Message):
+    if not is_admin(message.from_user.id):
+        await message.answer("❌ Доступ запрещен!")
+        return
+    
+    users_text = "👥 <b>Управление пользователями и ролями</b>\n\n"
+    users_text += f"📊 Всего пользователей: {len(USERS)}\n"
+    users_text += f"🔐 Активных сессий: {len([s for s in SESSIONS.values() if s.get('active', False)])}\n\n"
+    users_text += "Выберите действие:"
+    
+    await message.answer(users_text, reply_markup=get_admin_menu_keyboard())
+    log_activity(message.from_user.id, "VIEW_USER_MANAGEMENT", "Viewed user management")
+
+# 📜 История действий - НОВЫЙ МОДУЛЬ
+@dp.message(F.text == "📜 История действий")
+async def cmd_history(message: types.Message):
+    if not is_admin(message.from_user.id):
+        await message.answer("❌ Доступ запрещен!")
+        return
+    
+    if not ACTIVITY_LOGS:
+        await message.answer(
+            "📜 <b>История действий</b>\n\n"
+            "📝 История пуста",
+            reply_markup=get_main_menu(message.from_user.id)
+        )
+        return
+    
+    history_text = "📜 <b>История действий:</b>\n\n"
+    
+    # Показываем последние 20 записей
+    recent_logs = ACTIVITY_LOGS[-20:]
+    for log in reversed(recent_logs):
+        user = USERS.get(log['user_id'], {})
+        history_text += f"👤 {user.get('full_name', 'Unknown')}\n"
+        history_text += f"🔧 Действие: {log['action']}\n"
+        history_text += f"📅 Время: {log['timestamp']}\n"
+        history_text += f"📝 Детали: {log['details']}\n\n"
+    
+    await message.answer(history_text, reply_markup=get_main_menu(message.from_user.id))
+    log_activity(message.from_user.id, "VIEW_HISTORY", "Viewed action history")
+
+# 🚪 Выйти - НОВЫЙ МОДУЛЬ
+@dp.message(F.text == "🚪 Выйти")
+async def cmd_logout(message: types.Message):
+    user_id = message.from_user.id
+    
+    if user_id in SESSIONS:
+        SESSIONS[user_id]["active"] = False
+        del SESSIONS[user_id]
+    
+    # Меняем роль на CLIENT
+    if user_id in USERS:
+        USERS[user_id]["role"] = UserRole.CLIENT
+    
+    await message.answer(
+        "🚪 <b>Выход выполнен</b>\n\n"
+        "👤 Вы вернулись в обычный режим\n"
+        "🔐 Сессия завершена",
+        reply_markup=get_main_menu(user_id)
+    )
+    log_activity(user_id, "LOGOUT", "User logged out")
 
 @dp.message(Command("help"))
 async def cmd_help(message: types.Message):
