@@ -50,6 +50,37 @@ class UserRole:
     ADMIN = "ADMIN"                 # Администратор - полный доступ
     SUPER_ADMIN = "SUPER_ADMIN"       # Super Admin - полный доступ
     CLIENT = "CLIENT"               # Клиент - базовый доступ
+    PHARMACY = "PHARMACY"           # Аптека - новый тип клиента
+
+# Registration states for FSM
+from aiogram.fsm.context import FSMContext
+from aiogram.fsm.state import State, StatesGroup
+
+class RegistrationStates(StatesGroup):
+    PHARMACY_NAME = State()
+    PHONE = State()
+    FULL_NAME = State()
+    ADDRESS = State()
+
+class ApplicationStates(StatesGroup):
+    TEXT = State()
+    PHOTO = State()
+    VOICE = State()
+
+# Registration data
+REGISTRATION_DATA = {}  # {user_id: {"step": str, "data": dict}}
+
+# Client applications
+CLIENT_APPLICATIONS = []  # [{"id": int, "client_id": int, "type": str, "content": str, "timestamp": str, "status": str}]
+
+# Generate unique registration link
+def generate_registration_link(user_id: int) -> str:
+    """Генерация уникальной ссылки для регистрации"""
+    return f"https://t.me/solimfarm_bot?start=reg_{user_id}"
+
+# Check if user is registering
+def is_registering(user_id: int) -> bool:
+    return user_id in REGISTRATION_DATA
 
 # Order statuses - СТАТУСЫ ЗАЯВОК по ТЗ
 class OrderStatus:
@@ -160,11 +191,11 @@ def get_main_menu(user_id):
         keyboard = ReplyKeyboardMarkup(
             keyboard=[
                 [KeyboardButton(text="📊 Все заявки")],
-                [KeyboardButton(text="� Аналитика"), KeyboardButton(text="👥 Пользователи и роли")],
+                [KeyboardButton(text="📈 Аналитика"), KeyboardButton(text="👥 Пользователи и роли")],
                 [KeyboardButton(text="📜 История действий"), KeyboardButton(text="⚙ Настройки системы")],
                 [KeyboardButton(text="🔗 Интеграция 1С"), KeyboardButton(text="📦 Управление статусами")],
                 [KeyboardButton(text="📢 Рассылки"), KeyboardButton(text="🗄 Архив")],
-                [KeyboardButton(text="� Управление админами"), KeyboardButton(text="� Выйти")]
+                [KeyboardButton(text="🔐 Управление админами"), KeyboardButton(text="🚪 Выйти")]
             ],
             resize_keyboard=True
         )
@@ -174,7 +205,7 @@ def get_main_menu(user_id):
             keyboard=[
                 [KeyboardButton(text="📊 Все заявки")],
                 [KeyboardButton(text="📈 Моя статистика"), KeyboardButton(text="📜 История действий")],
-                [KeyboardButton(text="� Выйти")]
+                [KeyboardButton(text="🚪 Выйти")]
             ],
             resize_keyboard=True
         )
@@ -182,9 +213,9 @@ def get_main_menu(user_id):
         # Меню для сборщика
         keyboard = ReplyKeyboardMarkup(
             keyboard=[
-                [KeyboardButton(text="� Мои сборки")],
+                [KeyboardButton(text="📦 Мои сборки")],
                 [KeyboardButton(text="📈 Моя статистика"), KeyboardButton(text="📜 История действий")],
-                [KeyboardButton(text="� Выйти")]
+                [KeyboardButton(text="🚪 Выйти")]
             ],
             resize_keyboard=True
         )
@@ -192,9 +223,9 @@ def get_main_menu(user_id):
         # Меню для проверщика
         keyboard = ReplyKeyboardMarkup(
             keyboard=[
-                [KeyboardButton(text="� Проверка качества")],
-                [KeyboardButton(text="� Моя статистика"), KeyboardButton(text="📜 История действий")],
-                [KeyboardButton(text="� Выйти")]
+                [KeyboardButton(text="🔍 Проверка качества")],
+                [KeyboardButton(text="📈 Моя статистика"), KeyboardButton(text="📜 История действий")],
+                [KeyboardButton(text="🚪 Выйти")]
             ],
             resize_keyboard=True
         )
@@ -202,9 +233,19 @@ def get_main_menu(user_id):
         # Меню для курьера
         keyboard = ReplyKeyboardMarkup(
             keyboard=[
-                [KeyboardButton(text="� Мои доставки")],
-                [KeyboardButton(text="� Моя статистика"), KeyboardButton(text="� История действий")],
-                [KeyboardButton(text="🗺 Карта"), KeyboardButton(text="� Выйти")]
+                [KeyboardButton(text="🚚 Мои доставки")],
+                [KeyboardButton(text="📈 Моя статистика"), KeyboardButton(text="📜 История действий")],
+                [KeyboardButton(text="🗺 Карта"), KeyboardButton(text="🚪 Выйти")]
+            ],
+            resize_keyboard=True
+        )
+    elif role == UserRole.PHARMACY:
+        # Меню для аптеки (клиента)
+        keyboard = ReplyKeyboardMarkup(
+            keyboard=[
+                [KeyboardButton(text="📝 Создать заявку")],
+                [KeyboardButton(text="📋 Мои заявки"), KeyboardButton(text="📊 Статус моей заявки")],
+                [KeyboardButton(text="📞 Связаться с оператором")]
             ],
             resize_keyboard=True
         )
@@ -220,11 +261,22 @@ def get_main_menu(user_id):
     
     return keyboard
 
+def get_client_registration_menu():
+    """Меню для создания заявки клиента"""
+    return ReplyKeyboardMarkup(
+        keyboard=[
+            [KeyboardButton(text="✍️ Написать текстом")],
+            [KeyboardButton(text="📷 Отправить фото")],
+            [KeyboardButton(text="🎤 Отправить голосовое")],
+            [KeyboardButton(text="❌ Отменить заявку")]
+        ],
+        resize_keyboard=True
+    )
+
 def get_admin_menu_keyboard():
     """Клавиатура для меню управления пользователями"""
     return InlineKeyboardMarkup(inline_keyboard=[
         [
-            InlineKeyboardButton(text="➕ Добавить пользователя", callback_data="admin_add_user"),
             InlineKeyboardButton(text="📋 Список пользователей", callback_data="admin_list_users")
         ],
         [
@@ -242,8 +294,8 @@ def get_role_selection_keyboard_tz(user_id: int, action: str) -> InlineKeyboardM
     keyboard = InlineKeyboardMarkup(inline_keyboard=[
         [
             InlineKeyboardButton(
-                text="🧑‍💼 Директор", 
-                callback_data=f"role_{action}_{user_id}_{UserRole.DIRECTOR}"
+                text="🏥 Клиент (Аптека)", 
+                callback_data=f"role_{action}_{user_id}_{UserRole.PHARMACY}"
             ),
             InlineKeyboardButton(
                 text="📞 Оператор", 
@@ -357,13 +409,19 @@ dp = Dispatcher()
 # 🎯 ПРОВЕРКА РЕГИСТРАЦИИ HANDLERS
 print("🔧 Registering handlers...")
 
-# Handlers - ОБНОВЛЕНО по ТЗ
 @dp.message(Command("start"))
 async def cmd_start(message: types.Message):
     print(f"🎯 START HANDLER CALLED by {message.from_user.full_name} (ID: {message.from_user.id})")
     user_id = message.from_user.id
-    role = get_user_role(user_id)
+    args = message.text.split()
     
+    # Проверяем, это регистрация по ссылке
+    if len(args) > 1 and args[1].startswith("reg_"):
+        admin_id = int(args[1].split("_")[1])
+        await handle_registration_start(message, admin_id)
+        return
+    
+    role = get_user_role(user_id)
     print(f"👤 User role: {role}")
     
     # Initialize user if not exists
@@ -380,6 +438,11 @@ async def cmd_start(message: types.Message):
         }
         print(f"✅ User {user_id} initialized")
     
+    # Check if user is registering
+    if is_registering(user_id):
+        await continue_registration(message)
+        return
+    
     # Create session for admin users
     if role in [UserRole.SUPER_ADMIN, UserRole.ADMIN, UserRole.DIRECTOR]:
         create_session(user_id, role)
@@ -387,8 +450,8 @@ async def cmd_start(message: types.Message):
         expires = session_info.get("expires", "Неизвестно")
         
         welcome_text = (
-            f"� Добро пожаловать, {message.from_user.full_name}!\n\n"
-            f"� Ваша роль: {role}\n"
+            f"👋 Добро пожаловать, {message.from_user.full_name}!\n\n"
+            f"🔐 Ваша роль: {role}\n"
             f"⏰ Сессия активна до: {expires}\n\n"
             f"Выберите действие из меню ниже:"
         )
@@ -398,9 +461,16 @@ async def cmd_start(message: types.Message):
         expires = session_info.get("expires", "Неизвестно")
         
         welcome_text = (
-            f"� Добро пожаловать, {message.from_user.full_name}!\n\n"
-            f"� Ваша роль: ОПЕРАТОР\n"
+            f"👋 Добро пожаловать, {message.from_user.full_name}!\n\n"
+            f"🔐 Ваша роль: ОПЕРАТОР\n"
             f"⏰ Сессия активна до: {expires}\n\n"
+            f"Выберите действие из меню ниже:"
+        )
+    elif role == UserRole.PHARMACY:
+        welcome_text = (
+            f"🏥 Добро пожаловать, {message.from_user.full_name}!\n\n"
+            f"🔐 Ваша роль: АПТЕКА\n"
+            f"📋 Вы можете создавать заявки и отслеживать их статус\n\n"
             f"Выберите действие из меню ниже:"
         )
     elif role == UserRole.COLLECTOR:
@@ -409,8 +479,8 @@ async def cmd_start(message: types.Message):
         expires = session_info.get("expires", "Неизвестно")
         
         welcome_text = (
-            f"� Добро пожаловать, {message.from_user.full_name}!\n\n"
-            f"� Ваша роль: СБОРЩИК\n"
+            f"👋 Добро пожаловать, {message.from_user.full_name}!\n\n"
+            f"🔐 Ваша роль: СБОРЩИК\n"
             f"⏰ Сессия активна до: {expires}\n\n"
             f"Выберите действие из меню ниже:"
         )
@@ -420,8 +490,8 @@ async def cmd_start(message: types.Message):
         expires = session_info.get("expires", "Неизвестно")
         
         welcome_text = (
-            f"� Добро пожаловать, {message.from_user.full_name}!\n\n"
-            f"� Ваша роль: ПРОВЕРЩИК\n"
+            f"👋 Добро пожаловать, {message.from_user.full_name}!\n\n"
+            f"🔐 Ваша роль: ПРОВЕРЩИК\n"
             f"⏰ Сессия активна до: {expires}\n\n"
             f"Выберите действие из меню ниже:"
         )
@@ -431,8 +501,8 @@ async def cmd_start(message: types.Message):
         expires = session_info.get("expires", "Неизвестно")
         
         welcome_text = (
-            f"� Добро пожаловать, {message.from_user.full_name}!\n\n"
-            f"� Ваша роль: КУРЬЕР\n"
+            f"👋 Добро пожаловать, {message.from_user.full_name}!\n\n"
+            f"🔐 Ваша роль: КУРЬЕР\n"
             f"⏰ Сессия активна до: {expires}\n\n"
             f"Выберите действие из меню ниже:"
         )
@@ -454,6 +524,233 @@ async def cmd_start(message: types.Message):
     log_activity(user_id, "START", f"Role: {role}")
     logger.info(f"User {user_id} ({role}) started bot")
     print(f"✅ Start message sent with menu to {message.from_user.full_name}")
+
+async def handle_registration_start(message: types.Message, admin_id: int):
+    """Обработка начала регистрации по ссылке"""
+    user_id = message.from_user.id
+    
+    # Инициализируем данные регистрации
+    REGISTRATION_DATA[user_id] = {
+        "admin_id": admin_id,
+        "step": "pharmacy_name",
+        "data": {}
+    }
+    
+    await message.answer(
+        "🏥 <b>Регистрация аптеки</b>\n\n"
+        "📝 Пожалуйста, введите название вашей аптеки:",
+        reply_markup=ReplyKeyboardMarkup(
+            keyboard=[[KeyboardButton(text="❌ Отменить регистрацию")]],
+            resize_keyboard=True
+        )
+    )
+    
+    log_activity(user_id, "REGISTRATION_STARTED", f"Admin: {admin_id}")
+
+async def continue_registration(message: types.Message):
+    """Продолжение процесса регистрации"""
+    user_id = message.from_user.id
+    reg_data = REGISTRATION_DATA.get(user_id)
+    
+    if not reg_data:
+        return
+    
+    step = reg_data["step"]
+    data = reg_data["data"]
+    
+    if step == "pharmacy_name":
+        data["pharmacy_name"] = message.text
+        reg_data["step"] = "phone"
+        
+        await message.answer(
+            "📞 <b>Регистрация аптеки</b>\n\n"
+            "📝 Пожалуйста, введите номер телефона:",
+            reply_markup=ReplyKeyboardMarkup(
+                keyboard=[[KeyboardButton(text="❌ Отменить регистрацию")]],
+                resize_keyboard=True
+            )
+        )
+        
+    elif step == "phone":
+        data["phone"] = message.text
+        reg_data["step"] = "full_name"
+        
+        await message.answer(
+            "👤 <b>Регистрация аптеки</b>\n\n"
+            "📝 Пожалуйста, введите ФИО ответственного лица:",
+            reply_markup=ReplyKeyboardMarkup(
+                keyboard=[[KeyboardButton(text="❌ Отменить регистрацию")]],
+                resize_keyboard=True
+            )
+        )
+        
+    elif step == "full_name":
+        data["full_name"] = message.text
+        reg_data["step"] = "address"
+        
+        await message.answer(
+            "📍 <b>Регистрация аптеки</b>\n\n"
+            "📝 Пожалуйста, введите адрес аптеки:",
+            reply_markup=ReplyKeyboardMarkup(
+                keyboard=[[KeyboardButton(text="❌ Отменить регистрацию")]],
+                resize_keyboard=True
+            )
+        )
+        
+    elif step == "address":
+        data["address"] = message.text
+        
+        # Завершаем регистрацию
+        await complete_registration(message, user_id, data)
+
+async def complete_registration(message: types.Message, user_id: int, data: dict):
+    """Завершение регистрации"""
+    # Обновляем данные пользователя
+    if user_id not in USERS:
+        USERS[user_id] = {
+            "id": user_id,
+            "full_name": data["full_name"],
+            "role": UserRole.PHARMACY,
+            "cart": [],
+            "orders": [],
+            "phone": data["phone"],
+            "address": data["address"],
+            "pharmacy_name": data["pharmacy_name"],
+            "blocked": False
+        }
+    else:
+        USERS[user_id].update({
+            "role": UserRole.PHARMACY,
+            "phone": data["phone"],
+            "address": data["address"],
+            "pharmacy_name": data["pharmacy_name"]
+        })
+    
+    # Удаляем данные регистрации
+    del REGISTRATION_DATA[user_id]
+    
+    # Отправляем подтверждение
+    await message.answer(
+        "✅ <b>Регистрация завершена!</b>\n\n"
+        f"🏥 Аптека: {data['pharmacy_name']}\n"
+        f"👤 Ответственный: {data['full_name']}\n"
+        f"📞 Телефон: {data['phone']}\n"
+        f"📍 Адрес: {data['address']}\n\n"
+        "🎉 Теперь вы можете создавать заявки!",
+        reply_markup=get_main_menu(user_id)
+    )
+    
+    log_activity(user_id, "REGISTRATION_COMPLETED", f"Pharmacy: {data['pharmacy_name']}")
+
+# 🏥 Меню для аптек (клиентов)
+@dp.message(F.text == "📝 Создать заявку")
+async def cmd_create_application(message: types.Message):
+    if get_user_role(message.from_user.id) != UserRole.PHARMACY:
+        await message.answer("❌ Эта функция доступна только для аптек!")
+        return
+    
+    await message.answer(
+        "📝 <b>Создание заявки</b>\n\n"
+        "📋 Выберите тип заявки:",
+        reply_markup=get_client_registration_menu()
+    )
+    log_activity(message.from_user.id, "CREATE_APPLICATION_START", "Started creating application")
+
+@dp.message(F.text == "✍️ Написать текстом")
+async def cmd_text_application(message: types.Message):
+    if get_user_role(message.from_user.id) != UserRole.PHARMACY:
+        await message.answer("❌ Эта функция доступна только для аптек!")
+        return
+    
+    await message.answer(
+        "✍️ <b>Текстовая заявка</b>\n\n"
+        "📝 Напишите текст вашей заявки:",
+        reply_markup=ReplyKeyboardMarkup(
+            keyboard=[[KeyboardButton(text="❌ Отменить заявку")]],
+            resize_keyboard=True
+        )
+    )
+
+@dp.message(F.text == "❌ Отменить заявку")
+async def cmd_cancel_application(message: types.Message):
+    await message.answer(
+        "❌ <b>Заявка отменена</b>\n\n"
+        "📋 Вы вернулись в главное меню",
+        reply_markup=get_main_menu(message.from_user.id)
+    )
+
+@dp.message(F.text == "📋 Мои заявки")
+async def cmd_my_applications(message: types.Message):
+    if get_user_role(message.from_user.id) != UserRole.PHARMACY:
+        await message.answer("❌ Эта функция доступна только для аптек!")
+        return
+    
+    user_id = message.from_user.id
+    my_apps = [app for app in CLIENT_APPLICATIONS if app["client_id"] == user_id]
+    
+    if not my_apps:
+        await message.answer(
+            "📋 <b>Мои заявки</b>\n\n"
+            "📝 У вас пока нет заявок",
+            reply_markup=get_main_menu(user_id)
+        )
+        return
+    
+    apps_text = "📋 <b>Мои заявки:</b>\n\n"
+    
+    for app in my_apps:
+        apps_text += f"🆔 ID: {app['id']}\n"
+        apps_text += f"📊 Статус: {app['status']}\n"
+        apps_text += f"📅 Дата: {app['timestamp']}\n"
+        apps_text += f"📝 Тип: {app['type']}\n\n"
+    
+    await message.answer(apps_text, reply_markup=get_main_menu(user_id))
+
+@dp.message(F.text == "📊 Статус моей заявки")
+async def cmd_application_status(message: types.Message):
+    if get_user_role(message.from_user.id) != UserRole.PHARMACY:
+        await message.answer("❌ Эта функция доступна только для аптек!")
+        return
+    
+    user_id = message.from_user.id
+    my_apps = [app for app in CLIENT_APPLICATIONS if app["client_id"] == user_id]
+    
+    if not my_apps:
+        await message.answer(
+            "📊 <b>Статус заявки</b>\n\n"
+            "📝 У вас пока нет заявок",
+            reply_markup=get_main_menu(user_id)
+        )
+        return
+    
+    # Показываем последнюю заявку
+    last_app = my_apps[-1]
+    
+    status_text = (
+        f"📊 <b>Статус последней заявки</b>\n\n"
+        f"🆔 ID: {last_app['id']}\n"
+        f"📊 Статус: {last_app['status']}\n"
+        f"📅 Дата: {last_app['timestamp']}\n"
+        f"📝 Тип: {last_app['type']}\n\n"
+        f"📄 Содержимое: {last_app['content'][:100]}..."
+    )
+    
+    await message.answer(status_text, reply_markup=get_main_menu(user_id))
+
+@dp.message(F.text == "📞 Связаться с оператором")
+async def cmd_contact_operator(message: types.Message):
+    if get_user_role(message.from_user.id) != UserRole.PHARMACY:
+        await message.answer("❌ Эта функция доступна только для аптек!")
+        return
+    
+    await message.answer(
+        "📞 <b>Связь с оператором</b>\n\n"
+        "📝 Напишите ваше сообщение оператору:",
+        reply_markup=ReplyKeyboardMarkup(
+            keyboard=[[KeyboardButton(text="❌ Отменить")]],
+            resize_keyboard=True
+        )
+    )
 
 # 📊 Все заявки - НОВЫЙ МОДУЛЬ
 @dp.message(F.text == "📊 Все заявки")
@@ -1034,30 +1331,172 @@ async def callback_product_info(callback: types.CallbackQuery):
     )
     await callback.answer()
 
-# 🎯 УПРАВЛЕНИЕ ПОЛЬЗОВАТЕЛЯМИ
-@dp.callback_query(F.data == "add_user_start")
-async def callback_add_user_start(callback: types.CallbackQuery):
+# 🎯 ОБРАБОТЧИКИ ДОБАВЛЕНИЯ ПОЛЬЗОВАТЕЛЕЙ по ТЗ
+@dp.callback_query(F.data == "admin_add_user")
+async def callback_admin_add_user(callback: types.CallbackQuery):
     if not is_admin(callback.from_user.id):
         await callback.answer("❌ Доступ запрещен!")
         return
     
     await callback.message.edit_text(
         "➕ <b>Добавление пользователя</b>\n\n"
-        "📝 <b>Инструкция:</b>\n\n"
-        "1️⃣ Попросите пользователя отправить команду /start\n"
-        "2️⃣ Узнайте его Telegram ID\n"
-        "3️⃣ Отправьте его ID в этот чат\n\n"
-        "💬 <b>Формат:</b>\n"
-        "Просто отправьте ID пользователя\n\n"
-        "🔍 <b>Как узнать ID:</b>\n"
-        "• @userinfobot - отправьте ему /start\n"
-        "• @getmyid_bot - отправьте ему /start\n\n"
-        "📤 Отправьте ID пользователя для добавления:",
-        reply_markup=InlineKeyboardMarkup(inline_keyboard=[
-            [InlineKeyboardButton(text="🔙 Назад", callback_data="back_to_users")]
-        ])
+        "🎯 Выберите роль для нового пользователя:",
+        reply_markup=get_role_selection_keyboard_tz(callback.from_user.id, "add")
     )
     await callback.answer()
+
+@dp.callback_query(F.data.startswith("role_add_"))
+async def callback_role_add(callback: types.CallbackQuery):
+    """Обработка добавления пользователя с ролью"""
+    if not is_admin(callback.from_user.id):
+        await callback.answer("❌ Доступ запрещен!")
+        return
+    
+    try:
+        parts = callback.data.split("_")
+        user_id = int(parts[2])
+        role = parts[3]
+        
+        if role == UserRole.PHARMACY:
+            # Генерируем ссылку для регистрации аптеки
+            registration_link = generate_registration_link(user_id)
+            
+            await callback.message.edit_text(
+                f"🏥 <b>Добавление аптеки</b>\n\n"
+                f"🔗 Ссылка для регистрации:\n"
+                f"`{registration_link}`\n\n"
+                f"📋 <b>Инструкция:</b>\n"
+                f"1️⃣ Отправьте эту ссылку клиенту\n"
+                f"2️⃣ Клиент переходит по ссылке\n"
+                f"3️⃣ Нажимает /start\n"
+                f"4️⃣ Проходит регистрацию\n\n"
+                f"✅ После регистрации клиент сможет создавать заявки",
+                reply_markup=InlineKeyboardMarkup(inline_keyboard=[
+                    [InlineKeyboardButton(text="� Назад", callback_data="admin_back_main")]
+                ])
+            )
+        else:
+            # Добавляем сотрудника напрямую
+            USERS[user_id] = {
+                "id": user_id,
+                "full_name": f"User_{user_id}",
+                "role": role,
+                "cart": [],
+                "orders": [],
+                "phone": None,
+                "address": None,
+                "blocked": False
+            }
+            
+            role_name = {
+                UserRole.OPERATOR: "Оператор",
+                UserRole.COLLECTOR: "Сборщик",
+                UserRole.INSPECTOR: "Проверщик",
+                UserRole.COURIER: "Курьер",
+                UserRole.ADMIN: "Администратор",
+                UserRole.DIRECTOR: "Директор"
+            }.get(role, "Unknown")
+            
+            await callback.message.edit_text(
+                f"✅ <b>Сотрудник добавлен!</b>\n\n"
+                f"🆔 ID: {user_id}\n"
+                f"👤 Имя: User_{user_id}\n"
+                f"🔑 Роль: {role_name}\n\n"
+                f"� <b>Примечание:</b>\n"
+                f"Имя обновится при первом входе в бота",
+                reply_markup=InlineKeyboardMarkup(inline_keyboard=[
+                    [InlineKeyboardButton(text="🔙 Назад", callback_data="admin_back_main")]
+                ])
+            )
+        
+        log_activity(callback.from_user.id, "USER_ADDED", f"Role: {role}, ID: {user_id}")
+        await callback.answer("✅ Готово!")
+        
+    except Exception as e:
+        await callback.answer(f"❌ Ошибка: {e}")
+        logger.error(f"Role add error: {e}")
+
+@dp.callback_query(F.data == "admin_cancel")
+async def callback_admin_cancel(callback: types.CallbackQuery):
+    """Отмена действия"""
+    await callback.message.edit_text(
+        "❌ <b>Действие отменено</b>\n\n"
+        "📋 Вы вернулись в главное меню",
+        reply_markup=get_main_menu(callback.from_user.id)
+    )
+    await callback.answer()
+
+@dp.callback_query(F.data == "admin_back_main")
+async def callback_admin_back_main(callback: types.CallbackQuery):
+    """Возврат в главное меню"""
+    await callback.message.edit_text(
+        "👥 <b>Управление пользователями и ролями</b>\n\n"
+        f"📊 Всего пользователей: {len(USERS)}\n"
+        f"🔐 Активных сессий: {len([s for s in SESSIONS.values() if s.get('active', False)])}\n\n"
+        "Выберите действие:",
+        reply_markup=get_admin_menu_keyboard()
+    )
+    await callback.answer()
+
+# 🎯 ОБРАБОТЧИКИ ТЕКСТОВЫХ СООБЩЕНИЙ ДЛЯ РЕГИСТРАЦИИ И ЗАЯВОК
+@dp.message(F.text)
+async def handle_text_messages(message: types.Message):
+    user_id = message.from_user.id
+    
+    # Если пользователь в процессе регистрации
+    if is_registering(user_id):
+        await continue_registration(message)
+        return
+    
+    # Если это текстовая заявка от аптеки
+    if get_user_role(user_id) == UserRole.PHARMACY:
+        # Проверяем, не это ли ответ на приглашение написать текст
+        if "Напишите текст вашей заявки" in message.reply_to_message.text if message.reply_to_message else "":
+            # Создаем текстовую заявку
+            import datetime
+            app_id = len(CLIENT_APPLICATIONS) + 1
+            
+            application = {
+                "id": app_id,
+                "client_id": user_id,
+                "type": "text",
+                "content": message.text,
+                "timestamp": datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+                "status": "Новая"
+            }
+            
+            CLIENT_APPLICATIONS.append(application)
+            
+            await message.answer(
+                f"✅ <b>Заявка создана!</b>\n\n"
+                f"🆔 ID: {app_id}\n"
+                f"📝 Тип: Текстовая\n"
+                f"📊 Статус: Новая\n\n"
+                f"📞 Оператор свяжется с вами в ближайшее время",
+                reply_markup=get_main_menu(user_id)
+            )
+            
+            log_activity(user_id, "APPLICATION_CREATED", f"Text application #{app_id}")
+            
+            # Отправляем уведомление операторам (заглушка)
+            await notify_operators(application)
+        
+        # Если это сообщение оператору
+        elif "Напишите ваше сообщение оператору" in message.reply_to_message.text if message.reply_to_message else "":
+            await message.answer(
+                "✅ <b>Сообщение отправлено!</b>\n\n"
+                "📞 Оператор ответит вам в ближайшее время",
+                reply_markup=get_main_menu(user_id)
+            )
+            
+            log_activity(user_id, "MESSAGE_TO_OPERATOR", message.text)
+
+async def notify_operators(application: dict):
+    """Уведомление операторов о новой заявке"""
+    # Это заглушка - в реальной системе здесь будет отправка операторам
+    print(f"🔔 НОВАЯ ЗАЯВКА #{application['id']} от клиента {application['client_id']}")
+    print(f"📝 Тип: {application['type']}")
+    print(f"📄 Содержимое: {application['content']}")
 
 @dp.callback_query(F.data == "change_role_start")
 async def callback_change_role_start(callback: types.CallbackQuery):
