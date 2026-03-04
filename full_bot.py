@@ -2075,6 +2075,278 @@ async def cmd_cancel_registration(message: types.Message):
     )
     log_activity(user_id, "REGISTRATION_CANCELLED", "User cancelled registration")
 
+# 🧠 AI BRAIN INTEGRATION
+import ai_brain
+
+# 🤖 AI COMMANDS
+@dp.message(Command("ai_report"))
+async def cmd_ai_report(message: types.Message):
+    if not is_director(message.from_user.id):
+        await message.answer("❌ Доступ запрещен! Только для руководства.")
+        return
+    
+    await message.answer("🧠 <b>AI Brain анализирует данные...</b>\n\n⏳ Пожалуйста, подождите...")
+    
+    # Запускаем AI-анализ
+    analysis_result = await ai_brain.run_ai_analysis()
+    
+    # Отправляем отчет
+    await message.answer(analysis_result['report'])
+    log_activity(message.from_user.id, "AI_REPORT", "Generated AI report")
+
+@dp.message(Command("ai_problems"))
+async def cmd_ai_problems(message: types.Message):
+    if not is_director(message.from_user.id):
+        await message.answer("❌ Доступ запрещен! Только для руководства.")
+        return
+    
+    await message.answer("🔍 <b>AI ищет проблемы...</b>\n\n⏳ Анализ системы...")
+    
+    # Запускаем AI-анализ
+    analysis_result = await ai_brain.run_ai_analysis()
+    problems = analysis_result['problems']
+    
+    if not problems:
+        await message.answer("✅ <b>Проблем не обнаружено!</b>\n\n🎉 Система работает отлично!")
+        return
+    
+    problems_text = "🚨 <b>Обнаруженные проблемы:</b>\n\n"
+    
+    for i, problem in enumerate(problems, 1):
+        severity_emoji = {'high': '🔴', 'medium': '🟡', 'low': '🟢'}
+        problems_text += f"{i}. {severity_emoji.get(problem['severity'], '⚪')} <b>{problem['description']}</b>\n"
+        problems_text += f"   📊 Текущее значение: {problem['current_value']}\n"
+        problems_text += f"   ⚠️ Порог: {problem['threshold']}\n"
+        problems_text += f"   💥 Влияние: {problem['impact']}\n\n"
+    
+    await message.answer(problems_text)
+    log_activity(message.from_user.id, "AI_PROBLEMS", f"Found {len(problems)} problems")
+
+@dp.message(Command("ai_recommendations"))
+async def cmd_ai_recommendations(message: types.Message):
+    if not is_director(message.from_user.id):
+        await message.answer("❌ Доступ запрещен! Только для руководства.")
+        return
+    
+    await message.answer("💡 <b>AI генерирует рекомендации...</b>\n\n⏳ Анализ ситуации...")
+    
+    # Запускаем AI-анализ
+    analysis_result = await ai_brain.run_ai_analysis()
+    recommendations = analysis_result['recommendations']
+    
+    if not recommendations:
+        await message.answer("✅ <b>Рекомендаций нет!</b>\n\n🎉 Система оптимизирована!")
+        return
+    
+    rec_text = "💡 <b>AI-рекомендации:</b>\n\n"
+    
+    for i, rec in enumerate(recommendations, 1):
+        priority_emoji = {'high': '🔴', 'medium': '🟡', 'low': '🟢'}
+        rec_text += f"{i}. {priority_emoji.get(rec['priority'], '⚪')} <b>{rec['action']}</b>\n"
+        rec_text += f"   📝 Описание: {rec['description']}\n"
+        rec_text += f"   📈 Ожидаемый эффект: {rec['expected_impact']}\n\n"
+    
+    await message.answer(rec_text)
+    log_activity(message.from_user.id, "AI_RECOMMENDATIONS", f"Generated {len(recommendations)} recommendations")
+
+@dp.message(Command("ai_forecast"))
+async def cmd_ai_forecast(message: types.Message):
+    if not is_director(message.from_user.id):
+        await message.answer("❌ Доступ запрещен! Только для руководства.")
+        return
+    
+    await message.answer("🔮 <b>AI делает прогноз...</b>\n\n⏳ Анализ трендов...")
+    
+    # Запускаем AI-анализ
+    analysis_result = await ai_brain.run_ai_analysis()
+    forecast = analysis_result['forecast']
+    
+    if not forecast:
+        await message.answer("❌ <b>Недостаточно данных для прогноза</b>\n\n📊 Нужно больше истории заказов")
+        return
+    
+    forecast_text = (
+        "🔮 <b>AI-прогноз на завтра:</b>\n\n"
+        f"📦 Ожидаемые заказы: {forecast['tomorrow_orders']}\n"
+        f"👥 Рекомендуемый персонал: {forecast['recommended_staff']} человек\n"
+        f"⚠️ Уровень риска: {forecast['risk_level']}\n"
+        f"🕐 Пиковые часы: {', '.join(map(str, forecast['peak_hours']))}\n\n"
+        f"💡 <b>Рекомендации:</b>\n"
+    )
+    
+    # Добавляем рекомендации на основе прогноза
+    if forecast['risk_level'] == 'high':
+        forecast_text += "• 🔴 Высокий риск - увеличить персонал на 30%\n"
+    elif forecast['risk_level'] == 'medium':
+        forecast_text += "• 🟡 Средний риск - подготовить резервный персонал\n"
+    else:
+        forecast_text += "• 🟢 Низкий риск - стандартный режим работы\n"
+    
+    await message.answer(forecast_text)
+    log_activity(message.from_user.id, "AI_FORECAST", f"Generated forecast for tomorrow")
+
+@dp.message(Command("ai_dashboard"))
+async def cmd_ai_dashboard(message: types.Message):
+    if not is_director(message.from_user.id):
+        await message.answer("❌ Доступ запрещен! Только для руководства.")
+        return
+    
+    await message.answer("📊 <b>AI Dashboard загружается...</b>\n\n⏳ Собираю все метрики...")
+    
+    # Запускаем полный AI-анализ
+    analysis_result = await ai_brain.run_ai_analysis()
+    
+    # Создаем интерактивное дашборд
+    dashboard_text = (
+        "📊 <b>AI Dashboard MAXXPHARM</b>\n\n"
+        "🤖 <b>Состояние системы:</b>\n"
+    )
+    
+    # Метрики
+    metrics = analysis_result['metrics']
+    if metrics:
+        dashboard_text += (
+            f"📦 Заказов: {metrics.total_orders}\n"
+            f"✅ Выполнено: {metrics.completed_orders}\n"
+            f"❌ Отменено: {metrics.cancelled_orders}\n"
+            f"🔄 Конверсия: {metrics.conversion_rate:.1%}\n"
+            f"⏱️ Доставка: {metrics.avg_delivery_time:.0f} мин\n\n"
+        )
+    
+    # Проблемы
+    problems = analysis_result['problems']
+    if problems:
+        high_priority = len([p for p in problems if p['severity'] == 'high'])
+        medium_priority = len([p for p in problems if p['severity'] == 'medium'])
+        dashboard_text += (
+            f"🚨 <b>Проблемы:</b> {len(problems)}\n"
+            f"🔴 Высокий приоритет: {high_priority}\n"
+            f"🟡 Средний приоритет: {medium_priority}\n\n"
+        )
+    else:
+        dashboard_text += "✅ <b>Проблем нет!</b>\n\n"
+    
+    # Прогноз
+    forecast = analysis_result['forecast']
+    if forecast:
+        risk_emoji = {'low': '🟢', 'medium': '🟡', 'high': '🔴'}
+        dashboard_text += (
+            f"🔮 <b>Прогноз на завтра:</b>\n"
+            f"📦 Заказов: {forecast['tomorrow_orders']}\n"
+            f"⚠️ Риск: {risk_emoji.get(forecast['risk_level'], '⚪')} {forecast['risk_level']}\n\n"
+        )
+    
+    # Кнопки действий
+    await message.answer(
+        dashboard_text,
+        reply_markup=InlineKeyboardMarkup(inline_keyboard=[
+            [
+                InlineKeyboardButton(text="📊 Полный отчет", callback_data="ai_full_report"),
+                InlineKeyboardButton(text="🚨 Проблемы", callback_data="ai_problems_detail")
+            ],
+            [
+                InlineKeyboardButton(text="💡 Рекомендации", callback_data="ai_recommendations_detail"),
+                InlineKeyboardButton(text="🔮 Прогноз", callback_data="ai_forecast_detail")
+            ],
+            [
+                InlineKeyboardButton(text="🔄 Обновить", callback_data="ai_refresh_dashboard")
+            ]
+        ])
+    )
+    log_activity(message.from_user.id, "AI_DASHBOARD", "Viewed AI dashboard")
+
+# 🎯 AI CALLBACK HANDLERS
+@dp.callback_query(F.data == "ai_full_report")
+async def callback_ai_full_report(callback: types.CallbackQuery):
+    analysis_result = await ai_brain.run_ai_analysis()
+    await callback.message.edit_text(analysis_result['report'])
+    await callback.answer()
+
+@dp.callback_query(F.data == "ai_problems_detail")
+async def callback_ai_problems_detail(callback: types.CallbackQuery):
+    analysis_result = await ai_brain.run_ai_analysis()
+    problems = analysis_result['problems']
+    
+    if not problems:
+        await callback.answer("✅ Проблем нет!")
+        return
+    
+    problems_text = "🚨 <b>Детальный анализ проблем:</b>\n\n"
+    
+    for i, problem in enumerate(problems, 1):
+        severity_emoji = {'high': '🔴', 'medium': '🟡', 'low': '🟢'}
+        problems_text += f"{i}. {severity_emoji.get(problem['severity'], '⚪')} <b>{problem['type']}</b>\n"
+        problems_text += f"   📊 {problem['description']}\n"
+        problems_text += f"   💥 Влияние: {problem['impact']}\n\n"
+    
+    await callback.message.edit_text(problems_text)
+    await callback.answer()
+
+@dp.callback_query(F.data == "ai_recommendations_detail")
+async def callback_ai_recommendations_detail(callback: types.CallbackQuery):
+    analysis_result = await ai_brain.run_ai_analysis()
+    recommendations = analysis_result['recommendations']
+    
+    if not recommendations:
+        await callback.answer("✅ Рекомендаций нет!")
+        return
+    
+    rec_text = "💡 <b>Детальные рекомендации:</b>\n\n"
+    
+    for i, rec in enumerate(recommendations, 1):
+        priority_emoji = {'high': '🔴', 'medium': '🟡', 'low': '🟢'}
+        rec_text += f"{i}. {priority_emoji.get(rec['priority'], '⚪')} <b>{rec['type']}</b>\n"
+        rec_text += f"   🎯 {rec['action']}\n"
+        rec_text += f"   📝 {rec['description']}\n"
+        rec_text += f"   📈 {rec['expected_impact']}\n\n"
+    
+    await callback.message.edit_text(rec_text)
+    await callback.answer()
+
+@dp.callback_query(F.data == "ai_forecast_detail")
+async def callback_ai_forecast_detail(callback: types.CallbackQuery):
+    analysis_result = await ai_brain.run_ai_analysis()
+    forecast = analysis_result['forecast']
+    
+    if not forecast:
+        await callback.message.edit_text("❌ Недостаточно данных для прогноза")
+        return
+    
+    forecast_text = (
+        "🔮 <b>Детальный прогноз:</b>\n\n"
+        f"📦 Ожидаемые заказы: {forecast['tomorrow_orders']}\n"
+        f"👥 Нагрузка на оператора: {forecast['expected_load_per_operator']:.1f} заказов\n"
+        f"⚠️ Уровень риска: {forecast['risk_level']}\n"
+        f"👥 Рекомендуемый персонал: {forecast['recommended_staff']} человек\n"
+        f"🕐 Пиковые часы: {', '.join(map(str, forecast['peak_hours']))}\n\n"
+        f"💡 <b>Аналитика:</b>\n"
+    )
+    
+    # Добавляем аналитику
+    if forecast['risk_level'] == 'high':
+        forecast_text += "• 🔴 Рекомендуется увеличить персонал на 30%\n"
+        forecast_text += "• 🔴 Подготовить план перераспределения нагрузки\n"
+    elif forecast['risk_level'] == 'medium':
+        forecast_text += "• 🟡 Держать резервный персонал наготове\n"
+        forecast_text += "• 🟡 Оптимизировать расписание\n"
+    else:
+        forecast_text += "• 🟢 Стандартный режим работы\n"
+        forecast_text += "• 🟢 Можно планировать оптимизацию\n"
+    
+    await callback.message.edit_text(forecast_text)
+    await callback.answer()
+
+@dp.callback_query(F.data == "ai_refresh_dashboard")
+async def callback_ai_refresh_dashboard(callback: types.CallbackQuery):
+    await callback.message.edit_text("🔄 <b>Обновляю данные...</b>\n\n⏳ AI анализирует систему...")
+    
+    # Запускаем новый анализ
+    analysis_result = await ai_brain.run_ai_analysis()
+    
+    # Обновляем дашборд
+    await cmd_ai_dashboard(callback.message)
+    await callback.answer("✅ Данные обновлены!")
+
 print("✅ All handlers registered")
 
 async def main():
