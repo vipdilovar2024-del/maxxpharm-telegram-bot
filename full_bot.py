@@ -398,6 +398,7 @@ async def cmd_statistics(message: types.Message):
         f"🔐 Активных сессий: {len([s for s in SESSIONS.values() if datetime.now() < s['expires']])}\n\n"
         f"📅 Последнее обновление: {datetime.now().strftime('%Y-%m-%d %H:%M')}"
     )
+    
     await message.answer(stats_text)
     log_activity(message.from_user.id, "STATISTICS", "Viewed statistics")
 
@@ -407,20 +408,248 @@ async def cmd_orders(message: types.Message):
         await message.answer("❌ Доступ запрещен!")
         return
     
-    orders_text = "📦 <b>Активные заказы</b>\n\n"
+    orders_text = "📦 <b>Активные заказы:</b>\n\n"
     
-    for app_id, app in APPLICATIONS.items():
-        if app["status"] in ["Новая", "В работе"]:
-            orders_text += f"📋 Заявка #{app_id}\n"
-            orders_text += f"👤 Клиент: {app['client_id']}\n"
-            orders_text += f"📝 Содержание: {app['content'][:50]}...\n"
-            orders_text += f"📊 Статус: {app['status']}\n\n"
+    for app in APPLICATIONS.values():
+        orders_text += f"📋 ID: #{app['id']}\n"
+        orders_text += f"👤 Клиент: {app['client_id']}\n"
+        orders_text += f"📝 Содержание: {app['content'][:50]}...\n"
+        orders_text += f"📊 Статус: {app['status']}\n\n"
     
     if len(APPLICATIONS) == 0:
         orders_text += "📭 Активных заказов нет"
     
     await message.answer(orders_text)
     log_activity(message.from_user.id, "ORDERS", "Viewed orders")
+
+@dp.message(F.text == "� Пользователи")
+async def cmd_users(message: types.Message):
+    if not is_admin(message.from_user.id):
+        await message.answer("❌ Доступ запрещен!")
+        return
+    
+    users_text = "👥 <b>Пользователи системы:</b>\n\n"
+    role_counts = {}
+    
+    for user in USERS.values():
+        role = user["role"]
+        role_counts[role] = role_counts.get(role, 0) + 1
+    
+    for role, count in role_counts.items():
+        users_text += f"👤 {role}: {count}\n"
+    
+    await message.answer(users_text)
+    log_activity(message.from_user.id, "USERS", "Viewed users")
+
+@dp.message(F.text == "🧾 Товары")
+async def cmd_products(message: types.Message):
+    if not is_admin(message.from_user.id):
+        await message.answer("❌ Доступ запрещен!")
+        return
+    
+    await message.answer("🧾 <b>Управление товарами</b>\n\nФункция в разработке...")
+    log_activity(message.from_user.id, "PRODUCTS", "Viewed products")
+
+@dp.message(F.text == "🏷 Категории")
+async def cmd_categories(message: types.Message):
+    if not is_admin(message.from_user.id):
+        await message.answer("❌ Доступ запрещен!")
+        return
+    
+    await message.answer("🏷 <b>Управление категориями</b>\n\nФункция в разработке...")
+    log_activity(message.from_user.id, "CATEGORIES", "Viewed categories")
+
+@dp.message(F.text == "🏪 Склад")
+async def cmd_warehouse(message: types.Message):
+    if not is_admin(message.from_user.id):
+        await message.answer("❌ Доступ запрещен!")
+        return
+    
+    await message.answer("🏪 <b>Управление складом</b>\n\nФункция в разработке...")
+    log_activity(message.from_user.id, "WAREHOUSE", "Viewed warehouse")
+
+@dp.message(F.text == "⚙ Настройки")
+async def cmd_settings(message: types.Message):
+    if not is_super_admin(message.from_user.id):
+        await message.answer("❌ Доступ запрещен! Только для Super Admin.")
+        return
+    
+    await message.answer("⚙ <b>Настройки системы</b>\n\nФункция в разработке...")
+    log_activity(message.from_user.id, "SETTINGS", "Viewed settings")
+
+@dp.message(F.text == "📝 Логи")
+async def cmd_logs(message: types.Message):
+    if not is_super_admin(message.from_user.id):
+        await message.answer("❌ Доступ запрещен! Только для Super Admin.")
+        return
+    
+    logs_text = "� <b>Последние логи активности:</b>\n\n"
+    
+    for log in ACTIVITY_LOGS[-10:]:
+        logs_text += f"📅 {log['timestamp'].strftime('%H:%M')} - {log['user_id']} - {log['action']}\n"
+    
+    await message.answer(logs_text)
+    log_activity(message.from_user.id, "LOGS", "Viewed logs")
+
+@dp.message(F.text == "🧠 AI Анализ")
+async def cmd_ai_analysis_menu(message: types.Message):
+    if not is_director(message.from_user.id):
+        await message.answer("❌ Доступ запрещен! Только для руководства.")
+        return
+    
+    await message.answer("🧠 <b>AI Анализ</b>\n\nИспользуйте команду /ai_report для анализа данных")
+    log_activity(message.from_user.id, "AI_ANALYSIS_MENU", "Opened AI analysis menu")
+
+@dp.message(F.text == "📈 Отчеты")
+async def cmd_reports(message: types.Message):
+    if not is_director(message.from_user.id):
+        await message.answer("❌ Доступ запрещен! Только для руководства.")
+        return
+    
+    await message.answer("📈 <b>Отчеты системы</b>\n\nФункция в разработке...")
+    log_activity(message.from_user.id, "REPORTS", "Viewed reports")
+
+@dp.message(F.text == "📦 Новые заявки")
+async def cmd_new_applications(message: types.Message):
+    if not is_operator(message.from_user.id):
+        await message.answer("❌ Доступ запрещен! Только для операторов.")
+        return
+    
+    await message.answer("� <b>Новые заявки</b>\n\nФункция в разработке...")
+    log_activity(message.from_user.id, "NEW_APPLICATIONS", "Viewed new applications")
+
+@dp.message(F.text == "🔄 Мои заявки")
+async def cmd_my_applications(message: types.Message):
+    if not is_operator(message.from_user.id):
+        await message.answer("❌ Доступ запрещен! Только для операторов.")
+        return
+    
+    await message.answer("🔄 <b>Мои заявки</b>\n\nФункция в разработке...")
+    log_activity(message.from_user.id, "MY_APPLICATIONS", "Viewed my applications")
+
+@dp.message(F.text == "👥 Клиенты")
+async def cmd_clients(message: types.Message):
+    if not is_operator(message.from_user.id):
+        await message.answer("❌ Доступ запрещен! Только для операторов.")
+        return
+    
+    await message.answer("👥 <b>Управление клиентами</b>\n\nФункция в разработке...")
+    log_activity(message.from_user.id, "CLIENTS", "Viewed clients")
+
+@dp.message(F.text == "📦 Собрать заказ")
+async def cmd_collect_order(message: types.Message):
+    if not is_collector(message.from_user.id):
+        await message.answer("❌ Доступ запрещен! Только для сборщиков.")
+        return
+    
+    await message.answer("📦 <b>Сбор заказа</b>\n\nФункция в разработке...")
+    log_activity(message.from_user.id, "COLLECT_ORDER", "Started order collection")
+
+@dp.message(F.text == "🔄 История сборов")
+async def cmd_collection_history(message: types.Message):
+    if not is_collector(message.from_user.id):
+        await message.answer("❌ Доступ запрещен! Только для сборщиков.")
+        return
+    
+    await message.answer("🔄 <b>История сборов</b>\n\nФункция в разработке...")
+    log_activity(message.from_user.id, "COLLECTION_HISTORY", "Viewed collection history")
+
+@dp.message(F.text == "🔍 Проверить качество")
+async def cmd_quality_check(message: types.Message):
+    if not is_inspector(message.from_user.id):
+        await message.answer("❌ Доступ запрещен! Только для инспекторов.")
+        return
+    
+    await message.answer("🔍 <b>Проверка качества</b>\n\nФункция в разработке...")
+    log_activity(message.from_user.id, "QUALITY_CHECK", "Started quality check")
+
+@dp.message(F.text == "🔄 История проверок")
+async def cmd_inspection_history(message: types.Message):
+    if not is_inspector(message.from_user.id):
+        await message.answer("❌ Доступ запрещен! Только для инспекторов.")
+        return
+    
+    await message.answer("🔄 <b>История проверок</b>\n\nФункция в разработке...")
+    log_activity(message.from_user.id, "INSPECTION_HISTORY", "Viewed inspection history")
+
+@dp.message(F.text == "� Мои доставки")
+async def cmd_my_deliveries(message: types.Message):
+    if not is_courier(message.from_user.id):
+        await message.answer("❌ Доступ запрещен! Только для курьеров.")
+        return
+    
+    await message.answer("📦 <b>Мои доставки</b>\n\nФункция в разработке...")
+    log_activity(message.from_user.id, "MY_DELIVERIES", "Viewed my deliveries")
+
+@dp.message(F.text == "🗺 Карта")
+async def cmd_map(message: types.Message):
+    if not is_courier(message.from_user.id):
+        await message.answer("❌ Доступ запрещен! Только для курьеров.")
+        return
+    
+    await message.answer("🗺 <b>Карта доставок</b>\n\nФункция в разработке...")
+    log_activity(message.from_user.id, "MAP", "Viewed delivery map")
+
+@dp.message(F.text == "📞 Поддержка")
+async def cmd_support(message: types.Message):
+    await message.answer("📞 <b>Поддержка MAXXPHARM</b>\n\n📱 Свяжитесь с нами:\n\n📞 Телефон: +7-XXX-XXX-XX-XX\n📧 Email: support@maxxpharm.com\n⏰ Время работы: 9:00 - 18:00")
+    log_activity(message.from_user.id, "SUPPORT", "Contacted support")
+
+@dp.message(F.text == "📝 Создать заявку")
+async def cmd_create_application(message: types.Message):
+    if not is_pharmacy(message.from_user.id):
+        await message.answer("❌ Доступ запрещен! Только для аптек.")
+        return
+    
+    await message.answer("📝 <b>Создание заявки</b>\n\nФункция в разработке...")
+    log_activity(message.from_user.id, "CREATE_APPLICATION", "Started application creation")
+
+@dp.message(F.text == "📋 Мои заявки")
+async def cmd_pharmacy_applications(message: types.Message):
+    if not is_pharmacy(message.from_user.id):
+        await message.answer("❌ Доступ запрещен! Только для аптек.")
+        return
+    
+    await message.answer("📋 <b>Мои заявки</b>\n\nФункция в разработке...")
+    log_activity(message.from_user.id, "PHARMACY_APPLICATIONS", "Viewed pharmacy applications")
+
+@dp.message(F.text == "� Статус заявки")
+async def cmd_application_status(message: types.Message):
+    if not is_pharmacy(message.from_user.id):
+        await message.answer("❌ Доступ запрещен! Только для аптек.")
+        return
+    
+    await message.answer("📊 <b>Статус заявки</b>\n\nФункция в разработке...")
+    log_activity(message.from_user.id, "APPLICATION_STATUS", "Checked application status")
+
+@dp.message(F.text == "📞 Связаться с оператором")
+async def cmd_contact_operator(message: types.Message):
+    if not is_pharmacy(message.from_user.id):
+        await message.answer("❌ Доступ запрещен! Только для аптек.")
+        return
+    
+    await message.answer("📞 <b>Связь с оператором</b>\n\nФункция в разработке...")
+    log_activity(message.from_user.id, "CONTACT_OPERATOR", "Contacted operator")
+
+@dp.message(F.text == "🛍 Каталог")
+async def cmd_catalog(message: types.Message):
+    await message.answer("🛍 <b>Каталог товаров</b>\n\nФункция в разработке...")
+    log_activity(message.from_user.id, "CATALOG", "Viewed catalog")
+
+@dp.message(F.text == "🔍 Поиск")
+async def cmd_search(message: types.Message):
+    await message.answer("🔍 <b>Поиск товаров</b>\n\nФункция в разработке...")
+    log_activity(message.from_user.id, "SEARCH", "Used search")
+
+@dp.message(F.text == "🛒 Корзина")
+async def cmd_cart(message: types.Message):
+    await message.answer("🛒 <b>Корзина</b>\n\nФункция в разработке...")
+    log_activity(message.from_user.id, "CART", "Viewed cart")
+
+@dp.message(F.text == "📦 Мои заказы")
+async def cmd_my_orders(message: types.Message):
+    await message.answer("📦 <b>Мои заказы</b>\n\nФункция в разработке...")
+    log_activity(message.from_user.id, "MY_ORDERS", "Viewed my orders")
 
 @dp.message(F.text == "👥 Пользователи")
 async def cmd_users(message: types.Message):
