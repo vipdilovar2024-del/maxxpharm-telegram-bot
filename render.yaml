@@ -1,26 +1,30 @@
 services:
-  # Background Worker для Telegram бота
+  # 🛡️ Self-Healing Telegram Bot
   - type: worker
     name: maxxpharm-telegram-bot
     env: python
     plan: free
     buildCommand: "pip install --no-cache-dir -r requirements.txt"
-    startCommand: "python full_bot.py"
+    startCommand: "python self_healing_bot.py"
     healthCheck:
-      enabled: false
+      enabled: true
+      path: /health
+      gracePeriodSeconds: 30
+      intervalSeconds: 60
     autoDeploy: true
     envVars:
       - key: PYTHON_VERSION
         value: "3.11.14"
+      # 🤖 Bot Configuration
       - key: BOT_TOKEN
         value: "7759398408:AAE8sTBDYO9cf9tjbCu6ZcrvPQxy9j28KGI"
       - key: ADMIN_ID
         value: "697780123"
       - key: RENDER
         value: "True"
+      # 🗄️ Database Configuration
       - key: DATABASE_URL
         value: postgresql+asyncpg://solimfarm_db_steg_user:B4a9T78li3OZlOfVu3f6bF9iBfLWJfu9@dpg-d6ane6cr85hc73ep4qd0-a.oregon-postgres.render.com/solimfarm_db_steg
-      # 🗄️ Database Configuration
       - key: DB_HOST
         value: "dpg-d6ane6cr85hc73ep4qd0-a.oregon-postgres.render.com"
       - key: DB_PORT
@@ -44,4 +48,11 @@ services:
         value: "production"
       - key: DEBUG
         value: "False"
+      # 🛡️ Self-Healing Configuration
+      - key: SELF_HEALING_ENABLED
+        value: "True"
+      - key: MAX_RESTARTS
+        value: "10"
+      - key: HEALTH_CHECK_INTERVAL
+        value: "300"
     rootDir: /
