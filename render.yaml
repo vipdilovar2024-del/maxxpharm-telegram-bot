@@ -1,11 +1,11 @@
 services:
-  # 🚀 MAXXPHARM Enterprise - $10M Startup Architecture
+  # �️ MAXXPHARM Reliable Bot - 99.99% Uptime Architecture
   - type: worker
     name: maxxpharm-telegram-bot
     env: python
     plan: free
     buildCommand: "pip install --no-cache-dir -r requirements.txt"
-    startCommand: "python enterprise_bot.py"
+    startCommand: "python reliable_bot.py"
     healthCheck:
       enabled: true
       path: /health
@@ -48,29 +48,60 @@ services:
         value: "production"
       - key: DEBUG
         value: "False"
-      # 🚀 Enterprise Configuration
-      - key: ENTERPRISE_MODE
+      # �️ Reliable Configuration
+      - key: RELIABLE_MODE
         value: "True"
-      - key: STARTUP_ARCHITECTURE
-        value: "$10M"
-      - key: UBER_LEVEL
-        value: "True"
-      - key: SCALABLE_ARCHITECTURE
-        value: "True"
-      - key: MONITORING_ENABLED
-        value: "True"
-      - key: AUTO_RECOVERY_ENABLED
-        value: "True"
-      - key: HEALTH_CHECK_ENABLED
-        value: "True"
-      - key: METRICS_COLLECTION
-        value: "True"
-      - key: CACHE_LAYER
-        value: "True"
-      - key: QUEUE_SYSTEM
-        value: "True"
-      - key: AI_ANALYTICS
-        value: "True"
+      - key: UPTIME_TARGET
+        value: "99.99"
       - key: ANTI_CONFLICT
         value: "True"
+      - key: AUTO_RESTART
+        value: "True"
+      - key: HEARTBEAT_ENABLED
+        value: "True"
+      - key: POLLING_GUARD
+        value: "True"
+      - key: ERROR_MONITORING
+        value: "True"
+      - key: SINGLE_INSTANCE
+        value: "True"
+      - key: MAX_RESTARTS
+        value: "10"
+    rootDir: /
+
+  # ⚙️ MAXXPHARM Worker Service - Фоновые задачи
+  - type: worker
+    name: maxxpharm-worker
+    env: python
+    plan: free
+    buildCommand: "pip install --no-cache-dir -r requirements.txt"
+    startCommand: "python worker_service.py"
+    healthCheck:
+      enabled: true
+      path: /health
+      gracePeriodSeconds: 30
+      intervalSeconds: 60
+    autoDeploy: true
+    envVars:
+      - key: PYTHON_VERSION
+        value: "3.11.14"
+      # 🔄 Redis Configuration
+      - key: REDIS_URL
+        value: "redis://localhost:6379/0"
+      # 📊 Logging
+      - key: LOG_LEVEL
+        value: "INFO"
+      - key: ENVIRONMENT
+        value: "production"
+      - key: DEBUG
+        value: "False"
+      # ⚙️ Worker Configuration
+      - key: WORKER_CONCURRENCY
+        value: "4"
+      - key: WORKER_QUEUES
+        value: "ai_queue,notification_queue,order_queue,analytics_queue,maintenance_queue"
+      - key: CELERY_TIME_LIMIT
+        value: "300"
+      - key: CELERY_SOFT_TIME_LIMIT
+        value: "240"
     rootDir: /
