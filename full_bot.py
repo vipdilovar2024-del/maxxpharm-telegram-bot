@@ -208,91 +208,174 @@ def get_main_menu(user_id):
     if role == UserRole.SUPER_ADMIN:
         keyboard = ReplyKeyboardMarkup(
             keyboard=[
-                [KeyboardButton(text="📊 Статистика")],
-                [KeyboardButton(text="📦 Заказы"), KeyboardButton(text="👥 Пользователи")],
-                [KeyboardButton(text="🧾 Товары"), KeyboardButton(text="🏷 Категории")],
-                [KeyboardButton(text="🏪 Склад"), KeyboardButton(text="⚙ Настройки")],
-                [KeyboardButton(text="📝 Логи"), KeyboardButton(text="🚀 Выход")]
+                [
+                    KeyboardButton(text="📊 Статистика")
+                ],
+                [
+                    KeyboardButton(text="📦 Заказы"),
+                    KeyboardButton(text="👥 Пользователи")
+                ],
+                [
+                    KeyboardButton(text="🧾 Товары"),
+                    KeyboardButton(text="🏷 Категории")
+                ],
+                [
+                    KeyboardButton(text="🏪 Склад"),
+                    KeyboardButton(text="⚙ Настройки")
+                ],
+                [
+                    KeyboardButton(text="📝 Логи"),
+                    KeyboardButton(text="🚀 Выход")
+                ]
             ],
             resize_keyboard=True
         )
     elif role == UserRole.ADMIN:
         keyboard = ReplyKeyboardMarkup(
             keyboard=[
-                [KeyboardButton(text="📊 Статистика")],
-                [KeyboardButton(text="📦 Заказы"), KeyboardButton(text="👥 Пользователи")],
-                [KeyboardButton(text="🧾 Товары"), KeyboardButton(text="🏪 Склад")],
-                [KeyboardButton(text="🚀 Выход")]
+                [
+                    KeyboardButton(text="📊 Статистика")
+                ],
+                [
+                    KeyboardButton(text="📦 Заказы"),
+                    KeyboardButton(text="👥 Пользователи")
+                ],
+                [
+                    KeyboardButton(text="🧾 Товары"),
+                    KeyboardButton(text="🏪 Склад")
+                ],
+                [
+                    KeyboardButton(text="🚀 Выход")
+                ]
             ],
             resize_keyboard=True
         )
     elif role == UserRole.DIRECTOR:
         keyboard = ReplyKeyboardMarkup(
             keyboard=[
-                [KeyboardButton(text="📊 Статистика")],
-                [KeyboardButton(text="📦 Заказы"), KeyboardButton(text="👥 Пользователи")],
-                [KeyboardButton(text="🧾 Товары"), KeyboardButton(text="🏪 Склад")],
-                [KeyboardButton(text="🧠 AI Анализ"), KeyboardButton(text="📈 Отчеты")],
-                [KeyboardButton(text="🚀 Выход")]
+                [
+                    KeyboardButton(text="📊 Статистика")
+                ],
+                [
+                    KeyboardButton(text="📦 Заказы"),
+                    KeyboardButton(text="👥 Пользователи")
+                ],
+                [
+                    KeyboardButton(text="🧾 Товары"),
+                    KeyboardButton(text="🏪 Склад")
+                ],
+                [
+                    KeyboardButton(text="🧠 AI Анализ"),
+                    KeyboardButton(text="📈 Отчеты")
+                ],
+                [
+                    KeyboardButton(text="🚀 Выход")
+                ]
             ],
             resize_keyboard=True
         )
     elif role == UserRole.OPERATOR:
         keyboard = ReplyKeyboardMarkup(
             keyboard=[
-                [KeyboardButton(text="📦 Новые заявки")],
-                [KeyboardButton(text="🔄 Мои заявки"), KeyboardButton(text="📊 Статистика")],
-                [KeyboardButton(text="👥 Клиенты"), KeyboardButton(text="🚀 Выход")]
+                [
+                    KeyboardButton(text="📦 Новые заявки")
+                ],
+                [
+                    KeyboardButton(text="🔄 Мои заявки"),
+                    KeyboardButton(text="📊 Статистика")
+                ],
+                [
+                    KeyboardButton(text="👥 Клиенты"),
+                    KeyboardButton(text="🚀 Выход")
+                ]
             ],
             resize_keyboard=True
         )
     elif role == UserRole.COLLECTOR:
         keyboard = ReplyKeyboardMarkup(
             keyboard=[
-                [KeyboardButton(text="📦 Собрать заказ")],
-                [KeyboardButton(text="🔄 История сборов"), KeyboardButton(text="📊 Статистика")],
-                [KeyboardButton(text="🚀 Выход")]
+                [
+                    KeyboardButton(text="📦 Собрать заказ")
+                ],
+                [
+                    KeyboardButton(text="🔄 История сборов"),
+                    KeyboardButton(text="📊 Статистика")
+                ],
+                [
+                    KeyboardButton(text="🚀 Выход")
+                ]
             ],
             resize_keyboard=True
         )
     elif role == UserRole.INSPECTOR:
         keyboard = ReplyKeyboardMarkup(
             keyboard=[
-                [KeyboardButton(text="🔍 Проверить качество")],
-                [KeyboardButton(text="🔄 История проверок"), KeyboardButton(text="📊 Статистика")],
-                [KeyboardButton(text="🚀 Выход")]
+                [
+                    KeyboardButton(text="🔍 Проверить качество")
+                ],
+                [
+                    KeyboardButton(text="🔄 История проверок"),
+                    KeyboardButton(text="📊 Статистика")
+                ],
+                [
+                    KeyboardButton(text="🚀 Выход")
+                ]
             ],
             resize_keyboard=True
         )
     elif role == UserRole.COURIER:
         keyboard = ReplyKeyboardMarkup(
             keyboard=[
-                [KeyboardButton(text="📦 Мои доставки")],
-                [KeyboardButton(text="🗺 Карта"), KeyboardButton(text="📞 Поддержка")],
-                [KeyboardButton(text="🚀 Выход")]
+                [
+                    KeyboardButton(text="📦 Мои доставки")
+                ],
+                [
+                    KeyboardButton(text="🗺 Карта"),
+                    KeyboardButton(text="📞 Поддержка")
+                ],
+                [
+                    KeyboardButton(text="🚀 Выход")
+                ]
             ],
             resize_keyboard=True
         )
     elif role == UserRole.PHARMACY:
         keyboard = ReplyKeyboardMarkup(
             keyboard=[
-                [KeyboardButton(text="📝 Создать заявку")],
-                [KeyboardButton(text="📋 Мои заявки"), KeyboardButton(text="📊 Статус заявки")],
-                [KeyboardButton(text="📞 Связаться с оператором"), KeyboardButton(text="🚀 Выход")]
+                [
+                    KeyboardButton(text="📝 Создать заявку")
+                ],
+                [
+                    KeyboardButton(text="📋 Мои заявки"),
+                    KeyboardButton(text="📊 Статус заявки")
+                ],
+                [
+                    KeyboardButton(text="📞 Связаться с оператором"),
+                    KeyboardButton(text="🚀 Выход")
+                ]
             ],
             resize_keyboard=True
         )
     else:  # CLIENT
         keyboard = ReplyKeyboardMarkup(
             keyboard=[
-                [KeyboardButton(text="🛍 Каталог")],
-                [KeyboardButton(text="🔍 Поиск"), KeyboardButton(text="🛒 Корзина")],
-                [KeyboardButton(text="📦 Мои заказы"), KeyboardButton(text="📞 Поддержка")]
+                [
+                    KeyboardButton(text="🛍 Каталог")
+                ],
+                [
+                    KeyboardButton(text="🔍 Поиск"),
+                    KeyboardButton(text="🛒 Корзина")
+                ],
+                [
+                    KeyboardButton(text="📦 Мои заказы"),
+                    KeyboardButton(text="📞 Поддержка")
+                ]
             ],
             resize_keyboard=True
         )
     
     print(f"🔥 Menu created for role {role}")
+    print(f"🔥 Keyboard structure: {keyboard}")
     return keyboard
 
 def get_client_registration_menu():
