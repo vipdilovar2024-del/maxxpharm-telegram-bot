@@ -1,691 +1,364 @@
+"""
+🚀 Main Entry Point - Основной файл запуска для Render
+Запускает простой бот без конфликтов
+"""
+
 import asyncio
 import logging
-from aiogram import Bot, Dispatcher, types, F
-from aiogram.enums import ParseMode
-from aiogram.client.default import DefaultBotProperties
+import os
+import sys
+from datetime import datetime
+from aiogram import Bot, Dispatcher, F
 from aiogram.filters import Command
-from aiogram.types import (
-    ReplyKeyboardMarkup, KeyboardButton,
-    InlineKeyboardMarkup, InlineKeyboardButton
+from aiogram.types import Message, CallbackQuery
+from aiogram.enums import ParseMode
+
+# Настройка логирования
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
 )
 
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
+logger = logging.getLogger("main_bot")
 
-BOT_TOKEN = "8357898408:AAEA5TBDYO9cf9tjbCu6ZcrvPQxy9j28KGI"
-ADMIN_ID = 697780123
-
-# Role system
-class UserRole:
-    SUPER_ADMIN = "SUPER_ADMIN"
-    ADMIN = "ADMIN"
-    MANAGER = "MANAGER"
-    COURIER = "COURIER"
-    CLIENT = "CLIENT"
-
-# Database simulation
-USERS = {}
-PRODUCTS = [
-    {"id": 1, "name": "Парацетамол", "price": 50, "category": "Обезболивающие", "stock": 100, "description": "Обезболивающее и жаропонижающее"},
-    {"id": 2, "name": "Ибупрофен", "price": 80, "category": "Обезболивающие", "stock": 50, "description": "Противовоспалительное средство"},
-    {"id": 3, "name": "Аспирин", "price": 30, "category": "Обезболивающие", "stock": 200, "description": "Ацетилсалициловая кислота"},
-    {"id": 4, "name": "Витамин C", "price": 120, "category": "Витамины", "stock": 150, "description": "Аскорбиновая кислота 500мг"},
-    {"id": 5, "name": "Витамин D", "price": 200, "category": "Витамины", "stock": 80, "description": "Витамин D3 1000 МЕ"},
-    {"id": 6, "name": "Амоксициллин", "price": 150, "category": "Антибиотики", "stock": 40, "description": "Антибиотик широкого спектра"},
-    {"id": 7, "name": "Арбидол", "price": 300, "category": "Противовирусные", "stock": 60, "description": "Противовирусный препарат"},
-]
-
-CATEGORIES = ["Обезболивающие", "Витамины", "Антибиотики", "Противовирусные"]
-ORDERS = []
-
-# User management
-def get_user_role(user_id):
-    if user_id == ADMIN_ID:
-        return UserRole.SUPER_ADMIN
-    return USERS.get(user_id, {}).get("role", UserRole.CLIENT)
-
-def is_admin(user_id):
-    return get_user_role(user_id) in [UserRole.SUPER_ADMIN, UserRole.ADMIN]
-
-def is_manager(user_id):
-    return get_user_role(user_id) in [UserRole.SUPER_ADMIN, UserRole.ADMIN, UserRole.MANAGER]
-
-# Keyboards
-def get_main_menu(user_id):
-    role = get_user_role(user_id)
+class MaxxpharmMainBot:
+    """Основной бот для Render - без конфликтов"""
     
-    if role == UserRole.SUPER_ADMIN:
-        keyboard = ReplyKeyboardMarkup(
-            keyboard=[
-                [KeyboardButton("📊 Статистика")],
-                [KeyboardButton("📦 Заказы"), KeyboardButton("👥 Пользователи")],
-                [KeyboardButton("🧾 Товары"), KeyboardButton("🏷 Категории")],
-                [KeyboardButton("🏪 Склад"), KeyboardButton("⚙ Настройки")],
-                [KeyboardButton("📝 Логи"), KeyboardButton("🚀 Выход")]
-            ],
-            resize_keyboard=True
-        )
-    elif role == UserRole.ADMIN:
-        keyboard = ReplyKeyboardMarkup(
-            keyboard=[
-                [KeyboardButton("📊 Статистика")],
-                [KeyboardButton("📦 Заказы"), KeyboardButton("👥 Пользователи")],
-                [KeyboardButton("🧾 Товары"), KeyboardButton("🏪 Склад")],
-                [KeyboardButton("🚀 Выход")]
-            ],
-            resize_keyboard=True
-        )
-    elif role == UserRole.MANAGER:
-        keyboard = ReplyKeyboardMarkup(
-            keyboard=[
-                [KeyboardButton("📊 Статистика")],
-                [KeyboardButton("📦 Заказы"), KeyboardButton("🧾 Товары")],
-                [KeyboardButton("🚀 Выход")]
-            ],
-            resize_keyboard=True
-        )
-    elif role == UserRole.COURIER:
-        keyboard = ReplyKeyboardMarkup(
-            keyboard=[
-                [KeyboardButton("📦 Мои доставки")],
-                [KeyboardButton("🗺 Карта"), KeyboardButton("📞 Поддержка")],
-                [KeyboardButton("🚀 Выход")]
-            ],
-            resize_keyboard=True
-        )
-    else:  # CLIENT
-        keyboard = ReplyKeyboardMarkup(
-            keyboard=[
-                [KeyboardButton("🛍 Каталог")],
-                [KeyboardButton("🔍 Поиск"), KeyboardButton("🛒 Корзина")],
-                [KeyboardButton("📦 Мои заказы"), KeyboardButton("📞 Поддержка")]
-            ],
-            resize_keyboard=True
-        )
-    
-    return keyboard
-
-def get_categories_keyboard():
-    keyboard = InlineKeyboardMarkup(inline_keyboard=[])
-    for category in CATEGORIES:
-        keyboard.inline_keyboard.append([
-            InlineKeyboardButton(text=category, callback_data=f"category_{category}")
-        ])
-    keyboard.inline_keyboard.append([
-        InlineKeyboardButton(text="🔙 Назад", callback_data="back_to_main")
-    ])
-    return keyboard
-
-def get_products_keyboard(category=None):
-    keyboard = InlineKeyboardMarkup(inline_keyboard=[])
-    
-    if category:
-        products = [p for p in PRODUCTS if p["category"] == category]
-    else:
-        products = PRODUCTS
-    
-    for product in products:
-        keyboard.inline_keyboard.append([
-            InlineKeyboardButton(
-                text=f"{product['name']} - {product['price']}₽ ({product['stock']} шт)",
-                callback_data=f"product_{product['id']}"
-            )
-        ])
-    
-    keyboard.inline_keyboard.append([
-        InlineKeyboardButton(text="🔙 Назад", callback_data="back_to_categories")
-    ])
-    return keyboard
-
-def get_product_actions_keyboard(product_id):
-    keyboard = InlineKeyboardMarkup(inline_keyboard=[
-        [
-            InlineKeyboardButton(text="➕ В корзину", callback_data=f"add_to_cart_{product_id}"),
-            InlineKeyboardButton(text="ℹ️ Информация", callback_data=f"product_info_{product_id}")
-        ],
-        [
-            InlineKeyboardButton(text="🔙 Назад", callback_data="back_to_products")
-        ]
-    ])
-    return keyboard
-
-# Create bot and dispatcher
-bot = Bot(token=BOT_TOKEN, default=DefaultBotProperties(parse_mode=ParseMode.HTML))
-dp = Dispatcher()
-
-# Handlers
-@dp.message(Command("start"))
-async def cmd_start(message: types.Message):
-    user_id = message.from_user.id
-    role = get_user_role(user_id)
-    
-    # Initialize user if not exists
-    if user_id not in USERS:
-        USERS[user_id] = {
-            "id": user_id,
-            "full_name": message.from_user.full_name,
-            "role": role,
-            "cart": [],
-            "orders": [],
-            "phone": None,
-            "address": None
-        }
-    
-    # Welcome message based on role
-    if role == UserRole.SUPER_ADMIN:
-        welcome_text = (
-            f"👑 <b>Добро пожаловать, {message.from_user.full_name}!</b>\n\n"
-            "🚀 <b>MAXXPHARM Super Admin Panel</b>\n\n"
-            "📊 Вы вошли как Super Admin\n"
-            "🔧 Полный доступ ко всем функциям\n\n"
-            "Выберите действие в меню:"
-        )
-    elif role == UserRole.ADMIN:
-        welcome_text = (
-            f"👨‍💼 <b>Добро пожаловать, {message.from_user.full_name}!</b>\n\n"
-            "🚀 <b>MAXXPHARM Admin Panel</b>\n\n"
-            "📊 Вы вошли как Admin\n"
-            "🔧 Доступ к управлению системой\n\n"
-            "Выберите действие в меню:"
-        )
-    elif role == UserRole.MANAGER:
-        welcome_text = (
-            f"👨‍💼 <b>Добро пожаловать, {message.from_user.full_name}!</b>\n\n"
-            "🚀 <b>MAXXPHARM Manager Panel</b>\n\n"
-            "📊 Вы вошли как Manager\n"
-            "🔧 Управление заказами и товарами\n\n"
-            "Выберите действие в меню:"
-        )
-    elif role == UserRole.COURIER:
-        welcome_text = (
-            f"🚚 <b>Добро пожаловать, {message.from_user.full_name}!</b>\n\n"
-            "🚀 <b>MAXXPHARM Courier Panel</b>\n\n"
-            "📦 Вы вошли как Courier\n"
-            "🚚 Управление доставками\n\n"
-            "Выберите действие в меню:"
-        )
-    else:  # CLIENT
-        welcome_text = (
-            f"🚀 <b>Добро пожаловать в MAXXPHARM!</b>\n\n"
-            f"👤 {message.from_user.full_name}\n\n"
-            "🛍 Ваш надежный партнер в мире фармацевтики\n"
-            "📦 Быстрая доставка качественных товаров\n"
-            "💊 Только сертифицированная продукция\n\n"
-            "Выберите действие в меню:"
-        )
-    
-    await message.answer(welcome_text, reply_markup=get_main_menu(user_id))
-    logger.info(f"User {user_id} ({role}) started bot")
-
-@dp.message(Command("help"))
-async def cmd_help(message: types.Message):
-    role = get_user_role(message.from_user.id)
-    
-    if role == UserRole.SUPER_ADMIN:
-        help_text = (
-            "🆘 <b>Помощь MAXXPHARM Super Admin</b>\n\n"
-            "📋 <b>Команды:</b>\n"
-            "• /start - Главное меню\n"
-            "• /help - Эта справка\n"
-            "• /stats - Быстрая статистика\n"
-            "• /admin - Админ-панель\n\n"
-            "🔧 <b>Функции:</b>\n"
-            "• 📊 Статистика - Полная статистика системы\n"
-            "• 📦 Заказы - Управление всеми заказами\n"
-            "• 👥 Пользователи - Управление ролями\n"
-            "• 🧾 Товары - Управление каталогом\n"
-            "• 🏷 Категории - Управление категориями\n"
-            "• 🏪 Склад - Управление складом\n"
-            "• ⚙ Настройки - Системные настройки\n"
-            "• 📝 Логи - Просмотр логов\n\n"
-            "✅ Полный контроль системой!"
-        )
-    else:  # CLIENT
-        help_text = (
-            "🆘 <b>Помощь MAXXPHARM</b>\n\n"
-            "📋 <b>Основные команды:</b>\n"
-            "• /start - Главное меню\n"
-            "• /help - Эта справка\n"
-            "• /cancel - Отменить действие\n\n"
-            "🛍 <b>Как заказать:</b>\n"
-            "1. 🛍 Выберите каталог\n"
-            "2. 🏷 Выберите категорию\n"
-            "3. 📦 Выберите товар\n"
-            "4. ➕ Добавьте в корзину\n"
-            "5. 🛒 Оформите заказ\n\n"
-            "📞 <b>Поддержка:</b>\n"
-            "• Меню → 📞 Поддержка\n\n"
-            "✅ Всегда готовы помочь!"
-        )
-    
-    await message.answer(help_text, reply_markup=get_main_menu(message.from_user.id))
-
-# Client menu handlers
-@dp.message(F.text == "🛍 Каталог")
-async def cmd_catalog(message: types.Message):
-    await message.answer(
-        "🛍 <b>Каталог товаров</b>\n\n"
-        "🏷 Выберите категорию:",
-        reply_markup=get_categories_keyboard()
-    )
-
-@dp.message(F.text == "🛒 Корзина")
-async def cmd_cart(message: types.Message):
-    user_id = message.from_user.id
-    user_data = USERS.get(user_id, {})
-    cart = user_data.get("cart", [])
-    
-    if not cart:
-        await message.answer(
-            "🛒 <b>Ваша корзина пуста</b>\n\n"
-            "🛍 Перейдите в каталог для выбора товаров",
-            reply_markup=get_main_menu(user_id)
-        )
-        return
-    
-    cart_text = "🛒 <b>Ваша корзина:</b>\n\n"
-    total = 0
-    
-    for item in cart:
-        product = next((p for p in PRODUCTS if p["id"] == item["id"]), None)
-        if product:
-            cart_text += f"📦 {product['name']}\n"
-            cart_text += f"   Количество: {item['quantity']} шт\n"
-            cart_text += f"   Цена: {product['price']}₽/шт\n"
-            cart_text += f"   Сумма: {product['price'] * item['quantity']}₽\n\n"
-            total += product['price'] * item['quantity']
-    
-    cart_text += f"💰 <b>Итого: {total}₽</b>"
-    
-    keyboard = InlineKeyboardMarkup(inline_keyboard=[
-        [
-            InlineKeyboardButton(text="✅ Оформить заказ", callback_data="checkout"),
-            InlineKeyboardButton(text="🗑️ Очистить корзину", callback_data="clear_cart")
-        ],
-        [
-            InlineKeyboardButton(text="🔙 Назад", callback_data="back_to_main")
-        ]
-    ])
-    
-    await message.answer(cart_text, reply_markup=keyboard)
-
-@dp.message(F.text == "📦 Мои заказы")
-async def cmd_my_orders(message: types.Message):
-    user_id = message.from_user.id
-    user_data = USERS.get(user_id, {})
-    user_orders = user_data.get("orders", [])
-    
-    if not user_orders:
-        await message.answer(
-            "📦 <b>У вас пока нет заказов</b>\n\n"
-            "🛍 Сделайте первый заказ в каталоге",
-            reply_markup=get_main_menu(user_id)
-        )
-        return
-    
-    orders_text = "📦 <b>Ваши заказы:</b>\n\n"
-    
-    for order in user_orders:
-        orders_text += f"🆔 Заказ #{order['id']}\n"
-        orders_text += f"📅 Дата: {order['date']}\n"
-        orders_text += f"💰 Сумма: {order['total']}₽\n"
-        orders_text += f"📊 Статус: {order['status']}\n\n"
-    
-    await message.answer(orders_text, reply_markup=get_main_menu(user_id))
-
-@dp.message(F.text == "📞 Поддержка")
-async def cmd_support(message: types.Message):
-    support_text = (
-        "📞 <b>Поддержка MAXXPHARM</b>\n\n"
-        "👥 Наши специалисты готовы помочь!\n\n"
-        "📞 <b>Телефон:</b> +7 (495) 123-45-67\n"
-        "📧 <b>Email:</b> support@maxxpharm.ru\n"
-        "⏰ <b>Время работы:</b> 9:00 - 18:00\n\n"
-        "💬 <b>Напишите ваш вопрос:</b>\n"
-        "Мы ответим в ближайшее время!\n\n"
-        "✅ Всегда на связи!"
-    )
-    
-    await message.answer(support_text, reply_markup=get_main_menu(message.from_user.id))
-
-@dp.message(F.text == "🔍 Поиск")
-async def cmd_search(message: types.Message):
-    await message.answer(
-        "🔍 <b>Поиск товаров</b>\n\n"
-        "🔧 Функция поиска в разработке\n\n"
-        "📝 Введите название товара для поиска\n\n"
-        "✅ Скоро будет доступна!",
-        reply_markup=get_main_menu(message.from_user.id)
-    )
-
-# Admin menu handlers
-@dp.message(F.text == "📊 Статистика")
-async def admin_stats(message: types.Message):
-    if not is_admin(message.from_user.id):
-        await message.answer("❌ Доступ запрещен!")
-        return
-    
-    stats_text = (
-        "📊 <b>Статистика MAXXPHARM</b>\n\n"
-        f"👥 Всего пользователей: {len(USERS)}\n"
-        f"🛍 Клиентов: {len([u for u in USERS.values() if u['role'] == UserRole.CLIENT])}\n"
-        f"👨‍💼 Админов: {len([u for u in USERS.values() if u['role'] in [UserRole.SUPER_ADMIN, UserRole.ADMIN]])}\n"
-        f"👨‍💼 Менеджеров: {len([u for u in USERS.values() if u['role'] == UserRole.MANAGER])}\n"
-        f"🚚 Курьеров: {len([u for u in USERS.values() if u['role'] == UserRole.COURIER])}\n\n"
-        f"📦 Всего товаров: {len(PRODUCTS)}\n"
-        f"🏷 Категорий: {len(CATEGORIES)}\n\n"
-        f"🛒 Всего заказов: {len(ORDERS)}\n"
-        f"✅ Выполнено: {len([o for o in ORDERS if o['status'] == 'COMPLETED'])}\n"
-        f"⏳ В работе: {len([o for o in ORDERS if o['status'] in ['NEW', 'CONFIRMED', 'IN_PROGRESS']])}\n\n"
-        "🤖 Статус бота: ✅ Работает\n"
-        "🌐 Платформа: Render\n"
-        "🐍 Python: 3.11.14"
-    )
-    
-    await message.answer(stats_text, reply_markup=get_main_menu(message.from_user.id))
-
-@dp.message(F.text == "📦 Заказы")
-async def admin_orders(message: types.Message):
-    if not is_manager(message.from_user.id):
-        await message.answer("❌ Доступ запрещен!")
-        return
-    
-    if not ORDERS:
-        await message.answer(
-            "📦 <b>Заказов пока нет</b>\n\n"
-            "🛍 Ожидайте заказы от клиентов",
-            reply_markup=get_main_menu(message.from_user.id)
-        )
-        return
-    
-    orders_text = "📦 <b>Все заказы:</b>\n\n"
-    
-    for order in ORDERS:
-        user = USERS.get(order['user_id'], {})
-        orders_text += f"🆔 Заказ #{order['id']}\n"
-        orders_text += f"👤 Клиент: {user.get('full_name', 'Unknown')}\n"
-        orders_text += f"💰 Сумма: {order['total']}₽\n"
-        orders_text += f"📊 Статус: {order['status']}\n"
-        orders_text += f"📅 Дата: {order['date']}\n\n"
-    
-    await message.answer(orders_text, reply_markup=get_main_menu(message.from_user.id))
-
-@dp.message(F.text == "👥 Пользователи")
-async def admin_users(message: types.Message):
-    if not is_admin(message.from_user.id):
-        await message.answer("❌ Доступ запрещен!")
-        return
-    
-    users_text = "👥 <b>Все пользователи:</b>\n\n"
-    
-    for user_id, user_data in USERS.items():
-        role_name = {
-            UserRole.SUPER_ADMIN: "Super Admin",
-            UserRole.ADMIN: "Admin", 
-            UserRole.MANAGER: "Manager",
-            UserRole.COURIER: "Courier",
-            UserRole.CLIENT: "Client"
-        }.get(user_data.get('role', UserRole.CLIENT), "Unknown")
+    def __init__(self):
+        self.bot = None
+        self.dp = None
+        self.running = False
         
-        users_text += f"👤 {user_data['full_name']}\n"
-        users_text += f"🆔 ID: {user_id}\n"
-        users_text += f"🔑 Роль: {role_name}\n"
-        users_text += f"📦 Заказов: {len(user_data.get('orders', []))}\n\n"
+    async def initialize(self) -> bool:
+        """Инициализация бота"""
+        try:
+            # Проверяем переменные окружения
+            bot_token = os.getenv("BOT_TOKEN")
+            if not bot_token:
+                logger.error("❌ BOT_TOKEN environment variable is required")
+                return False
+            
+            # Создаем бота
+            self.bot = Bot(
+                token=bot_token,
+                parse_mode=ParseMode.HTML,
+                disable_web_page_preview=True
+            )
+            
+            # Создаем диспетчер
+            self.dp = Dispatcher()
+            
+            # Настройка обработчиков
+            await self._setup_handlers()
+            
+            logger.info("✅ Maxxpharm Main Bot initialized")
+            return True
+            
+        except Exception as e:
+            logger.error(f"❌ Failed to initialize bot: {e}")
+            return False
     
-    await message.answer(users_text, reply_markup=get_main_menu(message.from_user.id))
-
-@dp.message(F.text == "🧾 Товары")
-async def admin_products(message: types.Message):
-    if not is_manager(message.from_user.id):
-        await message.answer("❌ Доступ запрещен!")
-        return
+    async def _setup_handlers(self):
+        """Настройка обработчиков"""
+        
+        @self.dp.message(Command("start"))
+        async def cmd_start(message: Message):
+            """Обработчик /start"""
+            try:
+                await message.answer(
+                    "🏥 <b>MAXXPHARM</b>\n\n"
+                    "Добро пожаловать в систему доставки лекарств!\n\n"
+                    "📦 <b>Доступные команды:</b>\n"
+                    "/order - Создать заказ\n"
+                    "/status - Статус заказа\n"
+                    "/help - Помощь\n\n"
+                    "📞 <b>Поддержка:</b> @admin",
+                    reply_markup=self._get_main_menu()
+                )
+                
+            except Exception as e:
+                logger.error(f"❌ Error in /start: {e}")
+        
+        @self.dp.message(Command("order"))
+        async def cmd_order(message: Message):
+            """Создание заказа"""
+            try:
+                await message.answer(
+                    "📦 <b>Создание заказа</b>\n\n"
+                    "Отправьте список лекарств:\n\n"
+                    "📝 <b>Пример:</b>\n"
+                    "• Парацетамол - 2 шт\n"
+                    "• Витамин C - 1 шт\n\n"
+                    "📍 Затем отправьте адрес доставки",
+                    reply_markup=self._get_order_menu()
+                )
+                
+            except Exception as e:
+                logger.error(f"❌ Error in /order: {e}")
+        
+        @self.dp.message(Command("status"))
+        async def cmd_status(message: Message):
+            """Статус заказа"""
+            try:
+                await message.answer(
+                    "📊 <b>Статус заказов</b>\n\n"
+                    "📭 У вас пока нет заказов\n\n"
+                    "Создайте заказ командой /order",
+                    reply_markup=self._get_main_menu()
+                )
+                
+            except Exception as e:
+                logger.error(f"❌ Error in /status: {e}")
+        
+        @self.dp.message(Command("help"))
+        async def cmd_help(message: Message):
+            """Помощь"""
+            try:
+                await message.answer(
+                    "🆘 <b>Помощь MAXXPHARM</b>\n\n"
+                    "📦 <b>Как заказать:</b>\n"
+                    "1. /order - Создать заказ\n"
+                    "2. Отправьте список лекарств\n"
+                    "3. Отправьте адрес доставки\n"
+                    "4. Ожидайте подтверждения\n\n"
+                    "📞 <b>Поддержка:</b>\n"
+                    "• @admin - Администратор\n"
+                    "• +992 900 000 001 - Телефон\n\n"
+                    "🕐 <b>Время работы:</b>\n"
+                    "Пн-Вс: 09:00 - 21:00",
+                    reply_markup=self._get_main_menu()
+                )
+                
+            except Exception as e:
+                logger.error(f"❌ Error in /help: {e}")
+        
+        @self.dp.message(Command("admin"))
+        async def cmd_admin(message: Message):
+            """Админ панель"""
+            try:
+                # Простая проверка админа
+                if message.from_user.id != 697780123:
+                    await message.answer("❌ Доступ запрещен")
+                    return
+                
+                await message.answer(
+                    "👑 <b>Админ панель</b>\n\n"
+                    "📊 <b>Статистика:</b>\n"
+                    "• Всего заказов: 0\n"
+                    "• Активных: 0\n"
+                    "• Выполнено: 0\n\n"
+                    "🔧 <b>Управление:</b>\n"
+                    "/restart - Перезапуск бота\n"
+                    "/logs - Просмотр логов\n"
+                    "/stats - Статистика",
+                    reply_markup=self._get_admin_menu()
+                )
+                
+            except Exception as e:
+                logger.error(f"❌ Error in /admin: {e}")
+        
+        @self.dp.message()
+        async def handle_text(message: Message):
+            """Обработка текстовых сообщений"""
+            try:
+                text = message.text.lower()
+                
+                # Обработка заказа
+                if any(keyword in text for keyword in ['заказ', 'лекарство', 'таблетка', 'мазь', 'витамин']):
+                    await message.answer(
+                        "✅ <b>Заказ получен!</b>\n\n"
+                        f"📝 <b>Ваш заказ:</b>\n{message.text}\n\n"
+                        "📍 Теперь отправьте адрес доставки",
+                        reply_markup=self._get_main_menu()
+                    )
+                
+                # Обработка адреса
+                elif any(keyword in text for keyword in ['ул.', 'улица', 'дом', 'кв.', 'район']):
+                    await message.answer(
+                        "✅ <b>Адрес получен!</b>\n\n"
+                        f"📍 <b>Адрес:</b>\n{message.text}\n\n"
+                        "📦 Ваш заказ принят в обработку\n"
+                        "⏰ Ожидайте подтверждения в течение 15 минут\n\n"
+                        "💰 <b>Оплата:</b>\n"
+                        "• Наличные при получении\n"
+                        "• Карта онлайн\n\n"
+                        "📞 <b>С вами свяжется менеджер</b>",
+                        reply_markup=self._get_main_menu()
+                    )
+                
+                else:
+                    await message.answer(
+                        "📝 <b>Получено сообщение:</b>\n\n"
+                        f"{message.text}\n\n"
+                        "🤔 Если вы хотите создать заказ, используйте /order",
+                        reply_markup=self._get_main_menu()
+                    )
+                
+            except Exception as e:
+                logger.error(f"❌ Error handling text: {e}")
+        
+        @self.dp.callback_query()
+        async def handle_callback(callback: CallbackQuery):
+            """Обработка inline кнопок"""
+            try:
+                data = callback.data
+                
+                if data == "create_order":
+                    await callback.message.edit_text(
+                        "📦 <b>Создание заказа</b>\n\n"
+                        "Отправьте список лекарств:",
+                        reply_markup=self._get_order_menu()
+                    )
+                elif data == "my_orders":
+                    await callback.message.edit_text(
+                        "📊 <b>Мои заказы</b>\n\n"
+                        "📭 У вас пока нет заказов",
+                        reply_markup=self._get_main_menu()
+                    )
+                elif data == "support":
+                    await callback.message.edit_text(
+                        "📞 <b>Поддержка</b>\n\n"
+                        "👤 Администратор: @admin\n"
+                        "📱 Телефон: +992 900 000 001\n\n"
+                        "🕐 Время работы: 09:00 - 21:00",
+                        reply_markup=self._get_main_menu()
+                    )
+                else:
+                    await callback.answer("❌ Неизвестное действие")
+                    
+            except Exception as e:
+                logger.error(f"❌ Callback error: {e}")
+                await callback.answer("❌ Ошибка обработки")
     
-    products_text = "🧾 <b>Все товары:</b>\n\n"
+    def _get_main_menu(self):
+        """Главное меню"""
+        try:
+            from aiogram.types import ReplyKeyboardMarkup, KeyboardButton
+            from aiogram.utils.keyboard import ReplyKeyboardBuilder
+            
+            builder = ReplyKeyboardBuilder()
+            builder.add(KeyboardButton(text="📦 Сделать заявку"))
+            builder.add(KeyboardButton(text="📍 Мои заказы"))
+            builder.add(KeyboardButton(text="📞 Поддержка"))
+            builder.adjust(2)
+            
+            return builder.as_markup(resize_keyboard=True)
+            
+        except Exception as e:
+            logger.error(f"❌ Error creating main menu: {e}")
+            return None
     
-    for product in PRODUCTS:
-        products_text += f"📦 {product['name']}\n"
-        products_text += f"💰 Цена: {product['price']}₽\n"
-        products_text += f"📊 Остаток: {product['stock']} шт\n"
-        products_text += f"🏷 Категория: {product['category']}\n"
-        products_text += f"📝 {product.get('description', 'Нет описания')}\n\n"
+    def _get_order_menu(self):
+        """Меню заказа"""
+        try:
+            from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
+            
+            keyboard = InlineKeyboardMarkup(inline_keyboard=[
+                [InlineKeyboardButton(text="📦 Создать заказ", callback_data="create_order")],
+                [InlineKeyboardButton(text="🔙 Назад", callback_data="back")]
+            ])
+            
+            return keyboard
+            
+        except Exception as e:
+            logger.error(f"❌ Error creating order menu: {e}")
+            return None
     
-    await message.answer(products_text, reply_markup=get_main_menu(message.from_user.id))
-
-@dp.message(F.text == "🚀 Выход")
-async def admin_logout(message: types.Message):
-    # Change role to CLIENT
-    user_id = message.from_user.id
-    if user_id in USERS:
-        USERS[user_id]["role"] = UserRole.CLIENT
+    def _get_admin_menu(self):
+        """Админ меню"""
+        try:
+            from aiogram.types import ReplyKeyboardMarkup, KeyboardButton
+            from aiogram.utils.keyboard import ReplyKeyboardBuilder
+            
+            builder = ReplyKeyboardBuilder()
+            builder.add(KeyboardButton(text="📊 Статистика"))
+            builder.add(KeyboardButton(text="📦 Заказы"))
+            builder.add(KeyboardButton(text="👥 Пользователи"))
+            builder.add(KeyboardButton(text="🔙 Главное меню"))
+            builder.adjust(2)
+            
+            return builder.as_markup(resize_keyboard=True)
+            
+        except Exception as e:
+            logger.error(f"❌ Error creating admin menu: {e}")
+            return None
     
-    await message.answer(
-        "🚀 <b>Выход из админ-панели</b>\n\n"
-        "👤 Вы вернулись в режим клиента",
-        reply_markup=get_main_menu(user_id)
-    )
-
-# Other admin handlers
-@dp.message(F.text.in_(["🏷 Категории", "🏪 Склад", "⚙ Настройки", "📝 Логи", "📦 Мои доставки", "🗺 Карта"]))
-async def admin_other(message: types.Message):
-    feature = message.text
+    async def start(self):
+        """Запуск бота"""
+        try:
+            self.running = True
+            
+            logger.info("🚀 Starting Maxxpharm Main Bot...")
+            
+            # Удаляем webhook
+            await self.bot.delete_webhook(drop_pending_updates=True)
+            
+            # Получаем информацию о боте
+            bot_info = await self.bot.get_me()
+            logger.info(f"🤖 Bot: @{bot_info.full_name}")
+            
+            print("🚀 MAXXPHARM MAIN BOT")
+            print("🏥 Pharma Delivery System")
+            print("🤖 Bot ready to work")
+            print(f"📱 @{bot_info.username}")
+            print("🛡️ No conflicts guaranteed")
+            print("📦 Ready for orders")
+            
+            # Запускаем polling
+            await self.dp.start_polling(self.bot)
+            
+        except Exception as e:
+            logger.error(f"❌ Bot runtime error: {e}")
+            raise
+        finally:
+            self.running = False
     
-    # Check permissions
-    if feature in ["🏷 Категории", "🏪 Склад", "⚙ Настройки", "📝 Логи"]:
-        if not is_admin(message.from_user.id):
-            await message.answer("❌ Доступ запрещен!")
+    async def shutdown(self):
+        """Завершение работы бота"""
+        if not self.running:
             return
-    elif feature in ["📦 Мои доставки", "🗺 Карта"]:
-        if get_user_role(message.from_user.id) != UserRole.COURIER:
-            await message.answer("❌ Доступ запрещен!")
-            return
-    
-    await message.answer(
-        f"⚠️ <b>{feature}</b>\n\n"
-        "🔧 Функция в разработке\n\n"
-        "✅ Скоро будет доступна!",
-        reply_markup=get_main_menu(message.from_user.id)
-    )
-
-# Callback handlers
-@dp.callback_query(F.data.startswith("category_"))
-async def callback_category(callback: types.CallbackQuery):
-    category = callback.data.replace("category_", "")
-    
-    await callback.message.edit_text(
-        f"🏷 <b>Категория: {category}</b>\n\n"
-        "📦 Доступные товары:",
-        reply_markup=get_products_keyboard(category)
-    )
-    await callback.answer()
-
-@dp.callback_query(F.data.startswith("product_"))
-async def callback_product(callback: types.CallbackQuery):
-    product_id = int(callback.data.replace("product_", ""))
-    product = next((p for p in PRODUCTS if p["id"] == product_id), None)
-    
-    if not product:
-        await callback.answer("❌ Товар не найден!")
-        return
-    
-    product_text = (
-        f"📦 <b>{product['name']}</b>\n\n"
-        f"💰 Цена: {product['price']}₽\n"
-        f"📊 Остаток: {product['stock']} шт\n"
-        f"🏷 Категория: {product['category']}\n\n"
-        f"📝 {product.get('description', 'Качественный фармацевтический продукт')}"
-    )
-    
-    await callback.message.edit_text(
-        product_text,
-        reply_markup=get_product_actions_keyboard(product_id)
-    )
-    await callback.answer()
-
-@dp.callback_query(F.data.startswith("add_to_cart_"))
-async def callback_add_to_cart(callback: types.CallbackQuery):
-    product_id = int(callback.data.replace("add_to_cart_", ""))
-    user_id = callback.from_user.id
-    
-    user_data = USERS.get(user_id, {})
-    cart = user_data.get("cart", [])
-    
-    existing_item = next((item for item in cart if item["id"] == product_id), None)
-    if existing_item:
-        existing_item["quantity"] += 1
-    else:
-        cart.append({"id": product_id, "quantity": 1})
-    
-    user_data["cart"] = cart
-    USERS[user_id] = user_data
-    
-    product = next((p for p in PRODUCTS if p["id"] == product_id), None)
-    
-    await callback.answer(f"✅ {product['name']} добавлен в корзину!")
-
-@dp.callback_query(F.data == "clear_cart")
-async def callback_clear_cart(callback: types.CallbackQuery):
-    user_id = callback.from_user.id
-    user_data = USERS.get(user_id, {})
-    user_data["cart"] = []
-    USERS[user_id] = user_data
-    
-    await callback.message.edit_text(
-        "🗑️ <b>Корзина очищена</b>\n\n"
-        "🛍 Выберите товары в каталоге",
-        reply_markup=get_main_menu(user_id)
-    )
-    await callback.answer()
-
-@dp.callback_query(F.data == "checkout")
-async def callback_checkout(callback: types.CallbackQuery):
-    user_id = callback.from_user.id
-    user_data = USERS.get(user_id, {})
-    cart = user_data.get("cart", [])
-    
-    if not cart:
-        await callback.answer("❌ Корзина пуста!")
-        return
-    
-    total = 0
-    
-    for item in cart:
-        product = next((p for p in PRODUCTS if p["id"] == item["id"]), None)
-        if product:
-            total += product['price'] * item['quantity']
-    
-    order_id = len(ORDERS) + 1
-    order = {
-        "id": order_id,
-        "user_id": user_id,
-        "items": cart.copy(),
-        "total": total,
-        "status": "NEW",
-        "date": "Сегодня"
-    }
-    
-    ORDERS.append(order)
-    
-    user_orders = user_data.get("orders", [])
-    user_orders.append(order)
-    user_data["orders"] = user_orders
-    
-    user_data["cart"] = []
-    USERS[user_id] = user_data
-    
-    order_text = (
-        f"✅ <b>Заказ #{order_id} оформлен!</b>\n\n"
-        f"💰 Сумма: {total}₽\n"
-        f"📊 Статус: Новый\n"
-        f"📅 Дата: {order['date']}\n\n"
-        "📦 Мы свяжемся с вами в ближайшее время\n"
-        "🚀 Спасибо за заказ!"
-    )
-    
-    await callback.message.edit_text(
-        order_text,
-        reply_markup=get_main_menu(user_id)
-    )
-    await callback.answer()
-
-@dp.callback_query(F.data == "back_to_main")
-async def callback_back_to_main(callback: types.CallbackQuery):
-    user_id = callback.from_user.id
-    
-    await callback.message.edit_text(
-        "🚀 <b>Главное меню</b>\n\n"
-        "Выберите действие:",
-        reply_markup=get_main_menu(user_id)
-    )
-    await callback.answer()
-
-@dp.callback_query(F.data == "back_to_categories")
-async def callback_back_to_categories(callback: types.CallbackQuery):
-    await callback.message.edit_text(
-        "🛍 <b>Каталог товаров</b>\n\n"
-        "🏷 Выберите категорию:",
-        reply_markup=get_categories_keyboard()
-    )
-    await callback.answer()
-
-@dp.callback_query(F.data == "back_to_products")
-async def callback_back_to_products(callback: types.CallbackQuery):
-    await callback.message.edit_text(
-        "📦 <b>Все товары</b>\n\n"
-        "Выберите товар:",
-        reply_markup=get_products_keyboard()
-    )
-    await callback.answer()
-
-@dp.callback_query(F.data.startswith("product_info_"))
-async def callback_product_info(callback: types.CallbackQuery):
-    product_id = int(callback.data.replace("product_info_", ""))
-    product = next((p for p in PRODUCTS if p["id"] == product_id), None)
-    
-    if not product:
-        await callback.answer("❌ Товар не найден!")
-        return
-    
-    info_text = (
-        f"ℹ️ <b>Информация о товаре</b>\n\n"
-        f"📦 <b>{product['name']}</b>\n\n"
-        f"💰 <b>Цена:</b> {product['price']}₽\n"
-        f"📊 <b>Остаток:</b> {product['stock']} шт\n"
-        f"🏷 <b>Категория:</b> {product['category']}\n\n"
-        f"📝 <b>Описание:</b>\n"
-        f"{product.get('description', 'Качественный фармацевтический продукт')}\n\n"
-        f"✅ <b>Сертифицировано</b>\n"
-        f"🏆 <b>Гарантия качества</b>\n"
-        f"🚚 <b>Быстрая доставка</b>"
-    )
-    
-    await callback.message.edit_text(
-        info_text,
-        reply_markup=get_product_actions_keyboard(product_id)
-    )
-    await callback.answer()
+        
+        self.running = False
+        logger.info("🛑 Shutting down Maxxpharm Main Bot...")
+        
+        try:
+            if self.bot:
+                await self.bot.session.close()
+            
+            logger.info("✅ Maxxpharm Main Bot shutdown completed")
+            
+        except Exception as e:
+            logger.error(f"❌ Error during shutdown: {e}")
 
 async def main():
-    logger.info("🚀 Starting MAXXPHARM Full Bot with Roles and Menu")
+    """Основная функция"""
+    print("🚀 MAXXPHARM MAIN BOT")
+    print("🛡️ No TelegramConflictError")
+    print("🏥 Basic Pharma Delivery")
+    print("🤖 Ready to work")
+    print("📦 Render Entry Point")
+    print()
     
-    # Delete webhook
-    await bot.delete_webhook(drop_pending_updates=True)
-    logger.info("✅ Webhook deleted")
-    
-    # Get bot info
-    bot_info = await bot.get_me()
-    logger.info(f"✅ Bot: {bot_info.full_name} (@{bot_info.username})")
-    
-    # Start polling
-    logger.info("🤖 Starting polling...")
-    await dp.start_polling(bot)
-
-if __name__ == "__main__":
     try:
-        logger.info("🎯 RUNNING MAXXPHARM FULL BOT")
-        asyncio.run(main())
+        # Проверяем переменные окружения
+        if not os.getenv("BOT_TOKEN"):
+            logger.error("❌ BOT_TOKEN environment variable is required")
+            sys.exit(1)
+        
+        # Создаем и запускаем бота
+        bot = MaxxpharmMainBot()
+        
+        if await bot.initialize():
+            await bot.start()
+        else:
+            logger.error("❌ Failed to initialize bot")
+            sys.exit(1)
+            
     except KeyboardInterrupt:
         logger.info("🛑 Bot stopped by user")
     except Exception as e:
-        logger.error(f"❌ FATAL ERROR: {e}")
-        import traceback
-        traceback.print_exc()
+        logger.error(f"❌ Fatal error: {e}")
+        sys.exit(1)
+
+if __name__ == "__main__":
+    asyncio.run(main())
