@@ -1,11 +1,11 @@
 services:
-  # 🎨 MAXXPHARM Visual CRM - Красивый интерфейс как приложение
+  # 🚀 MAXXPHARM Enterprise - $10M Startup Architecture
   - type: worker
     name: maxxpharm-telegram-bot
     env: python
     plan: free
     buildCommand: "pip install --no-cache-dir -r requirements.txt"
-    startCommand: "python visual_crm_bot.py"
+    startCommand: "python enterprise_bot.py"
     healthCheck:
       enabled: true
       path: /health
@@ -35,7 +35,7 @@ services:
         value: "B4a9T78li3OZlOfVu3f6bF9iBfLWJfu9"
       - key: DB_NAME
         value: "solimfarm_db_steg"
-      # 🧠 AI Configuration - РЕАЛЬНЫЙ OPENAI API КЛЮЧ
+      # 🧠 AI Configuration
       - key: OPENAI_API_KEY
         value: "sk-proj-VhYJqL4xQ2ZrK8mN3pX7T9wF5sG6hJkLmN1pQ2rS4tU5vW6xY7zA8bC9dE0f"
       # 🔄 Redis Configuration
@@ -48,11 +48,29 @@ services:
         value: "production"
       - key: DEBUG
         value: "False"
-      # 🎨 Visual CRM Configuration
-      - key: VISUAL_MODE
+      # 🚀 Enterprise Configuration
+      - key: ENTERPRISE_MODE
         value: "True"
-      - key: APP_LIKE_UX
+      - key: STARTUP_ARCHITECTURE
+        value: "$10M"
+      - key: UBER_LEVEL
         value: "True"
-      - key: BEAUTIFUL_INTERFACE
+      - key: SCALABLE_ARCHITECTURE
+        value: "True"
+      - key: MONITORING_ENABLED
+        value: "True"
+      - key: AUTO_RECOVERY_ENABLED
+        value: "True"
+      - key: HEALTH_CHECK_ENABLED
+        value: "True"
+      - key: METRICS_COLLECTION
+        value: "True"
+      - key: CACHE_LAYER
+        value: "True"
+      - key: QUEUE_SYSTEM
+        value: "True"
+      - key: AI_ANALYTICS
+        value: "True"
+      - key: ANTI_CONFLICT
         value: "True"
     rootDir: /
