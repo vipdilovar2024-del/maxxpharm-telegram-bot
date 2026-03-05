@@ -1,16 +1,19 @@
 services:
-  # 📱 MAXXPHARM Uber-like CRM - Интерфейс как приложение
-  - type: worker
+  # �️ MAXXPHARM Production Bot - Enterprise CRM с 99.99% uptime
+  - type: web
     name: maxxpharm-telegram-bot
     env: python
     plan: free
     buildCommand: "pip install --no-cache-dir -r requirements.txt"
-    startCommand: "python uber_crm_bot.py"
+    startCommand: "python production_bot.py"
+    healthCheckPath: "/health"
     healthCheck:
       enabled: true
-      path: /health
       gracePeriodSeconds: 30
       intervalSeconds: 60
+      timeoutSeconds: 10
+      failureThreshold: 3
+      successThreshold: 2
     autoDeploy: true
     envVars:
       - key: PYTHON_VERSION
@@ -48,25 +51,26 @@ services:
         value: "production"
       - key: DEBUG
         value: "False"
-      # 📱 Uber-like UX Configuration
-      - key: UBER_LIKE_UX
+      # �️ Production Configuration
+      - key: PRODUCTION_MODE
         value: "True"
-      - key: APP_INTERFACE
+      - key: WATCHDOG_ENABLED
         value: "True"
-      - key: MOBILE_APP_UX
+      - key: HEALTH_CHECK_ENABLED
         value: "True"
-      - key: ROLE_BASED_SCREENS
+      - key: BOT_LOCK_ENABLED
         value: "True"
-      - key: UNIVERSAL_ORDER_CARDS
+      - key: MAX_RESTARTS
+        value: "10"
+      - key: LOCK_TTL
+        value: "60"
+      - key: HEARTBEAT_INTERVAL
+        value: "30"
+      # 📊 Monitoring
+      - key: METRICS_ENABLED
         value: "True"
-      - key: INLINE_ACTIONS
+      - key: ALERTS_ENABLED
         value: "True"
-      - key: AUTO_ASSIGNMENT
-        value: "True"
-      - key - key: REAL_TIME_STATUS
-        value: "True"
-      - key: NOTIFICATION_SYSTEM
-        value: "True"
-      - key: UBER_WORKFLOW
+      - key: PERFORMANCE_MONITORING
         value: "True"
     rootDir: /
