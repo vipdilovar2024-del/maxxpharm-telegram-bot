@@ -200,7 +200,11 @@ def get_client_applications(client_id: int) -> List[Dict]:
     """Получение заявок клиента"""
     return [app for app in APPLICATIONS.values() if app["client_id"] == client_id]
 
-# 🎹 Клавиатуры
+# 🧠 AI Director для CRM
+from ai_director import AIDirector
+
+# Инициализация AI Director
+ai_director = AIDirector(openai_client=None)  # Пока без OpenAI
 def get_main_menu(user_id):
     """Получение главного меню"""
     print(f"🔥 get_main_menu called for user_id: {user_id}")
@@ -742,6 +746,96 @@ async def cmd_cart(message: types.Message):
 async def cmd_my_orders(message: types.Message):
     await message.answer("📦 <b>Мои заказы</b>\n\nФункция в разработке...")
     log_activity(message.from_user.id, "MY_ORDERS", "Viewed my orders")
+
+# 🧠 AI Director Commands
+@dp.message(F.text == "/director")
+async def cmd_director(message: types.Message):
+    if not is_director(message.from_user.id):
+        await message.answer("❌ Доступ запрещен! Только для директоров.")
+        return
+    
+    # Получаем бизнес-метрики
+    metrics = ai_director.get_business_metrics(days=7)
+    
+    # Анализируем проблемы
+    analysis = await ai_director.analyze_business_problems(metrics)
+    
+    # Генерируем отчет
+    report = ai_director.generate_daily_report(metrics, analysis)
+    
+    await message.answer(report)
+    log_activity(message.from_user.id, "DIRECTOR_REPORT", "Generated AI director report")
+
+@dp.message(F.text == "/forecast")
+async def cmd_forecast(message: types.Message):
+    if not is_director(message.from_user.id):
+        await message.answer("❌ Доступ запрещен! Только для директоров.")
+        return
+    
+    # Получаем прогноз
+    forecast = await ai_director.generate_forecast(days_ahead=7)
+    
+    report = f"""
+📈 <b>Прогноз MAXXPHARM на {forecast['days_ahead']} дней</b>
+
+📊 Прогноз:
+• Заявок: {forecast['forecast_leads']}
+• Продаж: {forecast['forecast_sales']}
+• Выручка: ${forecast['forecast_revenue']}
+
+📈 Тренды:
+• Заявки: {forecast['leads_trend']}%
+• Продажи: {forecast['sales_trend']}%
+
+🕐 {datetime.now().strftime('%Y-%m-%d %H:%M')}
+"""
+    
+    await message.answer(report)
+    log_activity(message.from_user.id, "FORECAST", "Generated sales forecast")
+
+@dp.message(F.text == "/stats")
+async def cmd_stats(message: types.Message):
+    if not is_director(message.from_user.id):
+        await message.answer("❌ Доступ запрещен! Только для директоров.")
+        return
+    
+    # Добавляем тестовые данные для демонстрации
+    ai_director.add_lead({
+        'client_name': 'Тестовый клиент',
+        'phone': '+998900123456',
+        'product': 'Лекарства',
+        'manager': 'Али',
+        'price': 150
+    })
+    
+    ai_director.add_sale({
+        'lead_id': 1,
+        'manager': 'Али',
+        'amount': 150,
+        'product': 'Лекарства'
+    })
+    
+    # Получаем статистику
+    metrics = ai_director.get_business_metrics(days=7)
+    
+    report = f"""
+📊 <b>Статистика MAXXPHARM CRM</b>
+
+📈 За последние {metrics['period_days']} дней:
+• Заявок: {metrics['total_leads']}
+• Продаж: {metrics['total_sales']}
+• Конверсия: {metrics['conversion_rate']}%
+• Общая выручка: ${metrics['total_revenue']}
+• Средний чек: ${metrics['avg_sale_amount']}
+
+👥 Менеджеры:
+"""
+    
+    for manager, stats in metrics['manager_stats'].items():
+        report += f"• {manager}: {stats['sales']} продаж (${stats['amount']})\n"
+    
+    await message.answer(report)
+    log_activity(message.from_user.id, "STATS", "Viewed CRM statistics")
 
 @dp.message(F.text == "👥 Пользователи")
 async def cmd_users(message: types.Message):
