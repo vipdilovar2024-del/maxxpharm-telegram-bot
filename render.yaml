@@ -1,11 +1,11 @@
 services:
-  # � MAXXPHARM SaaS CRM - Уровень Uber/Amazon/Glovo
+  # 🎨 MAXXPHARM Visual CRM - Красивый интерфейс как приложение
   - type: worker
     name: maxxpharm-telegram-bot
     env: python
     plan: free
     buildCommand: "pip install --no-cache-dir -r requirements.txt"
-    startCommand: "python saas_crm_bot.py"
+    startCommand: "python visual_crm_bot.py"
     healthCheck:
       enabled: true
       path: /health
@@ -48,11 +48,11 @@ services:
         value: "production"
       - key: DEBUG
         value: "False"
-      # � SaaS CRM Configuration
-      - key: SAAS_MODE
+      # 🎨 Visual CRM Configuration
+      - key: VISUAL_MODE
         value: "True"
-      - key: MULTI_TENANT
+      - key: APP_LIKE_UX
         value: "True"
-      - key: ENTERPRISE_FEATURES
+      - key: BEAUTIFUL_INTERFACE
         value: "True"
     rootDir: /
