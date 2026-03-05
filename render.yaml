@@ -1,11 +1,11 @@
 services:
-  # �️ MAXXPHARM Production Bot - Enterprise CRM с 99.99% uptime
+  # 🚀 MAXXPHARM Production Bot - Объединенный бот со всеми возможностями
   - type: web
     name: maxxpharm-telegram-bot
     env: python
     plan: free
     buildCommand: "pip install --no-cache-dir -r requirements.txt"
-    startCommand: "python production_bot.py"
+    startCommand: "python maxxpharm_production_bot.py"
     healthCheckPath: "/health"
     healthCheck:
       enabled: true
@@ -27,7 +27,7 @@ services:
         value: "True"
       # 🗄️ Database Configuration
       - key: DATABASE_URL
-        value: postgresql+asyncpg://solimfarm_db_steg_user:B4a9T78li3OZlOfVu3f6bF9iBfLWJfu9@dpg-d6ane6cr85hc73ep4qd0-a.oregon-postgres.render.com/solimfarm_db_steg
+        value: "postgresql+asyncpg://solimfarm_db_steg_user:B4a9T78li3OZlOfVu3f6bF9iBfLWJfu9@dpg-d6ane6cr85hc73ep4qd0-a.oregon-postgres.render.com/solimfarm_db_steg"
       - key: DB_HOST
         value: "dpg-d6ane6cr85hc73ep4qd0-a.oregon-postgres.render.com"
       - key: DB_PORT
@@ -51,7 +51,7 @@ services:
         value: "production"
       - key: DEBUG
         value: "False"
-      # �️ Production Configuration
+      # 🛡️ Production System Configuration
       - key: PRODUCTION_MODE
         value: "True"
       - key: WATCHDOG_ENABLED
@@ -66,11 +66,65 @@ services:
         value: "60"
       - key: HEARTBEAT_INTERVAL
         value: "30"
-      # 📊 Monitoring
+      # 🏗️ Uber Architecture Configuration
+      - key: UBER_ARCHITECTURE_ENABLED
+        value: "True"
+      - key: QUEUE_SYSTEM_ENABLED
+        value: "True"
+      - key: WORKER_SYSTEM_ENABLED
+        value: "True"
+      - key: API_LAYER_ENABLED
+        value: "True"
+      - key: AUTO_ASSIGNMENT_ENABLED
+        value: "True"
+      # 🗄️ Database Configuration
+      - key: DATABASE_ENABLED
+        value: "True"
+      - key: DATABASE_POOL_SIZE
+        value: "20"
+      - key: DATABASE_TIMEOUT
+        value: "60"
+      # 📊 Monitoring Configuration
       - key: METRICS_ENABLED
         value: "True"
       - key: ALERTS_ENABLED
         value: "True"
       - key: PERFORMANCE_MONITORING
         value: "True"
+      - key: SYSTEM_LOGS_ENABLED
+        value: "True"
+      # 🤖 Bot Features
+      - key: TELEGRAM_FEATURES_ENABLED
+        value: "True"
+      - key: INLINE_BUTTONS_ENABLED
+        value: "True"
+      - key: ROLE_BASED_MENU_ENABLED
+        value: "True"
+      - key: ORDER_MANAGEMENT_ENABLED
+        value: "True"
+      - key: PAYMENT_PROCESSING_ENABLED
+        value: "True"
+      - key: DELIVERY_TRACKING_ENABLED
+        value: "True"
+      - key: ANALYTICS_ENABLED
+        value: "True"
+      - key: NOTIFICATIONS_ENABLED
+        value: "True"
+      # 🎯 Business Configuration
+      - key: BUSINESS_HOURS_START
+        value: "09:00"
+      - key: BUSINESS_HOURS_END
+        value: "21:00"
+      - key: TIMEZONE
+        value: "Asia/Dushanbe"
+      - key: CURRENCY
+        value: "сомони"
+      - key: FREE_DELIVERY_THRESHOLD
+        value: "100.00"
+      - key: DELIVERY_PRICE_CENTER
+        value: "15.00"
+      - key: DELIVERY_PRICE_OTHER
+        value: "25.00"
+      - key: MAX_ORDERS_PER_WORKER
+        value: "5"
     rootDir: /
