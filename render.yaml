@@ -1,11 +1,11 @@
 services:
-  # 🚀 MAXXPHARM High-Performance Bot - 100K Orders/Day
+  # � MAXXPHARM Complete CRM - Полная цепочка заказа
   - type: worker
     name: maxxpharm-telegram-bot
     env: python
     plan: free
     buildCommand: "pip install --no-cache-dir -r requirements.txt"
-    startCommand: "python high_performance_bot.py"
+    startCommand: "python complete_crm_bot.py"
     healthCheck:
       enabled: true
       path: /health
@@ -48,99 +48,17 @@ services:
         value: "production"
       - key: DEBUG
         value: "False"
-      # 🚀 High-Performance Configuration
-      - key: HIGH_PERFORMANCE_MODE
+      # � Complete CRM Configuration
+      - key: COMPLETE_CRM_MODE
         value: "True"
-      - key: ORDERS_PER_DAY_TARGET
-        value: "100000"
-      - key: MICROSERVICES_ENABLED
+      - key: FULL_CHAIN_ENABLED
         value: "True"
-      - key: EVENT_BUS_ENABLED
+      - key: AUTO_ASSIGNMENT_ENABLED
         value: "True"
-      - key: PARALLEL_PROCESSING
+      - key: ROLE_BASED_MENU
         value: "True"
-      - key: RATE_LIMITING
+      - key: STATUS_TRACKING
         value: "True"
-      - key: PERFORMANCE_MONITORING
+      - key: WORKFLOW_AUTOMATION
         value: "True"
-    rootDir: /
-
-  # ⚙️ Order Workers Service - Обработка заказов
-  - type: worker
-    name: maxxpharm-order-workers
-    env: python
-    plan: free
-    buildCommand: "pip install --no-cache-dir -r requirements.txt"
-    startCommand: "python worker_services.py"
-    healthCheck:
-      enabled: true
-      path: /health
-      gracePeriodSeconds: 30
-      intervalSeconds: 60
-    autoDeploy: true
-    envVars:
-      - key: PYTHON_VERSION
-        value: "3.11.14"
-      # 🔄 Redis Configuration
-      - key: REDIS_URL
-        value: "redis://localhost:6379/0"
-      # 📊 Logging
-      - key: LOG_LEVEL
-        value: "INFO"
-      - key: ENVIRONMENT
-        value: "production"
-      - key: DEBUG
-        value: "False"
-      # ⚙️ Worker Configuration
-      - key: WORKER_TYPE
-        value: "order"
-      - key: WORKER_CONCURRENCY
-        value: "4"
-      - key: ORDER_QUEUE_SIZE
-        value: "10000"
-      - key: PROCESSING_BATCH_SIZE
-        value: "10"
-    rootDir: /
-
-  # ⚙️ All Workers Service - Все типы workers
-  - type: worker
-    name: maxxpharm-all-workers
-    env: python
-    plan: free
-    buildCommand: "pip install --no-cache-dir -r requirements.txt"
-    startCommand: "python worker_services.py"
-    healthCheck:
-      enabled: true
-      path: /health
-      gracePeriodSeconds: 30
-      intervalSeconds: 60
-    autoDeploy: true
-    envVars:
-      - key: PYTHON_VERSION
-        value: "3.11.14"
-      # 🔄 Redis Configuration
-      - key: REDIS_URL
-        value: "redis://localhost:6379/0"
-      # 📊 Logging
-      - key: LOG_LEVEL
-        value: "INFO"
-      - key: ENVIRONMENT
-        value: "production"
-      - key: DEBUG
-        value: "False"
-      # ⚙️ Worker Configuration
-      - key: WORKER_TYPE
-        value: "all"
-      - key: TOTAL_WORKERS
-        value: "12"
-      - key: ORDER_WORKERS
-        value: "4"
-      - key: PAYMENT_WORKERS
-        value: "2"
-      - key: NOTIFICATION_WORKERS
-        value: "3"
-      - key: ANALYTICS_WORKERS
-        value: "1"
-      - key: DELIVERY_WORKERS
-        value: "2"
     rootDir: /
