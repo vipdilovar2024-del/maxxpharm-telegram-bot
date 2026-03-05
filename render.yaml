@@ -1,11 +1,11 @@
 services:
-  # � MAXXPHARM Complete CRM - Полная цепочка заказа
+  # 📱 MAXXPHARM Uber-like CRM - Интерфейс как приложение
   - type: worker
     name: maxxpharm-telegram-bot
     env: python
     plan: free
     buildCommand: "pip install --no-cache-dir -r requirements.txt"
-    startCommand: "python complete_crm_bot.py"
+    startCommand: "python uber_crm_bot.py"
     healthCheck:
       enabled: true
       path: /health
@@ -48,17 +48,25 @@ services:
         value: "production"
       - key: DEBUG
         value: "False"
-      # � Complete CRM Configuration
-      - key: COMPLETE_CRM_MODE
+      # 📱 Uber-like UX Configuration
+      - key: UBER_LIKE_UX
         value: "True"
-      - key: FULL_CHAIN_ENABLED
+      - key: APP_INTERFACE
         value: "True"
-      - key: AUTO_ASSIGNMENT_ENABLED
+      - key: MOBILE_APP_UX
         value: "True"
-      - key: ROLE_BASED_MENU
+      - key: ROLE_BASED_SCREENS
         value: "True"
-      - key: STATUS_TRACKING
+      - key: UNIVERSAL_ORDER_CARDS
         value: "True"
-      - key: WORKFLOW_AUTOMATION
+      - key: INLINE_ACTIONS
+        value: "True"
+      - key: AUTO_ASSIGNMENT
+        value: "True"
+      - key - key: REAL_TIME_STATUS
+        value: "True"
+      - key: NOTIFICATION_SYSTEM
+        value: "True"
+      - key: UBER_WORKFLOW
         value: "True"
     rootDir: /
