@@ -1227,14 +1227,24 @@ async def main():
         # Delete webhook с принудительной остановкой
         print("🗑️ Deleting webhook...")
         try:
+            # Получаем текущий webhook
+            webhook_info = await bot.get_webhook_info()
+            print(f"🔗 Current webhook: {webhook_info.url}")
+            
+            # Принудительно удаляем webhook
             await bot.delete_webhook(drop_pending_updates=True)
-            await bot.set_webhook(url=None)  # Принудительно удаляем webhook
+            await bot.set_webhook(url=None)
+            
+            # Проверяем что webhook удален
+            webhook_check = await bot.get_webhook_info()
+            print(f"🔗 Webhook after deletion: {webhook_check.url}")
+            
             print("✅ Webhook deleted successfully!")
         except Exception as e:
             print(f"⚠️ Webhook deletion error: {e}")
         
-        # Ждем немного для стабилизации
-        await asyncio.sleep(2)
+        # Ждем для стабилизации
+        await asyncio.sleep(3)
         
         # Get bot info
         bot_info = await bot.get_me()
