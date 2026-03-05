@@ -605,21 +605,45 @@ async def main():
             logger.error("❌ BOT_TOKEN environment variable is required")
             sys.exit(1)
         
-        # Проверяем на существующий бота
-        from bot_lock_system import check_for_existing_bot
+        # Проверяем на существующий бота (простая проверка без Redis)
+        try:
+            from bot_lock_system import BotLock
+            bot_lock = BotLock()
+            
+            if await bot_lock.connect():
+                # Очищаем мертвые экземпляры
+                await bot_lock.cleanup_dead_instances()
+                
+                # Пытаемся получить блокировку
+                if not await bot_lock.acquire_lock():
+                    logger.error("❌ Cannot start - another bot instance is running")
+                    sys.exit(1)
+                
+                logger.info("✅ Bot lock acquired successfully")
+            else:
+                logger.warning("⚠️ Redis not available, running without lock")
+        except Exception as e:
+            logger.warning(f"⚠️ Bot lock system failed: {e}")
+            logger.info("🚀 Continuing without bot lock")
         
-        if not check_for_existing_bot():
-            logger.error("❌ Cannot start - another bot instance is running")
-            sys.exit(1)
-        
-        # Создаем и запускаем бота
-        bot = MaxxpharmProductionBot()
-        
-        if await bot.initialize():
-            await bot.start()
-        else:
-            logger.error("❌ Failed to initialize bot")
-            sys.exit(1)
+        try:
+            # Создаем и запускаем бота
+            bot = MaxxpharmProductionBot()
+            
+            if await bot.initialize():
+                await bot.start()
+            else:
+                logger.error("❌ Failed to initialize bot")
+                sys.exit(1)
+                
+        finally:
+            # Освобождаем блокировку если она была получена
+            try:
+                if 'bot_lock' in locals():
+                    await bot_lock.release_lock()
+                    logger.info("🔓 Bot lock released")
+            except:
+                pass
             
     except KeyboardInterrupt:
         logger.info("🛑 Bot stopped by user")
