@@ -1,3 +1,13 @@
+import os
+import sys
+
+LOCK_FILE = "/tmp/solimfarm_bot.lock"
+
+if os.path.exists(LOCK_FILE):
+    print("Bot already running")
+    sys.exit()
+
+open(LOCK_FILE, "w").close()
 """
 🚀 Main Entry Point - Основной файл запуска для Render
 Запускает простой бот без конфликтов
