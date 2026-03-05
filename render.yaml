@@ -1,11 +1,11 @@
 services:
-  # �️ MAXXPHARM Reliable Bot - 99.99% Uptime Architecture
+  # 🚀 MAXXPHARM High-Performance Bot - 100K Orders/Day
   - type: worker
     name: maxxpharm-telegram-bot
     env: python
     plan: free
     buildCommand: "pip install --no-cache-dir -r requirements.txt"
-    startCommand: "python reliable_bot.py"
+    startCommand: "python high_performance_bot.py"
     healthCheck:
       enabled: true
       path: /health
@@ -48,34 +48,30 @@ services:
         value: "production"
       - key: DEBUG
         value: "False"
-      # �️ Reliable Configuration
-      - key: RELIABLE_MODE
+      # 🚀 High-Performance Configuration
+      - key: HIGH_PERFORMANCE_MODE
         value: "True"
-      - key: UPTIME_TARGET
-        value: "99.99"
-      - key: ANTI_CONFLICT
+      - key: ORDERS_PER_DAY_TARGET
+        value: "100000"
+      - key: MICROSERVICES_ENABLED
         value: "True"
-      - key: AUTO_RESTART
+      - key: EVENT_BUS_ENABLED
         value: "True"
-      - key: HEARTBEAT_ENABLED
+      - key: PARALLEL_PROCESSING
         value: "True"
-      - key: POLLING_GUARD
+      - key: RATE_LIMITING
         value: "True"
-      - key: ERROR_MONITORING
+      - key: PERFORMANCE_MONITORING
         value: "True"
-      - key: SINGLE_INSTANCE
-        value: "True"
-      - key: MAX_RESTARTS
-        value: "10"
     rootDir: /
 
-  # ⚙️ MAXXPHARM Worker Service - Фоновые задачи
+  # ⚙️ Order Workers Service - Обработка заказов
   - type: worker
-    name: maxxpharm-worker
+    name: maxxpharm-order-workers
     env: python
     plan: free
     buildCommand: "pip install --no-cache-dir -r requirements.txt"
-    startCommand: "python worker_service.py"
+    startCommand: "python worker_services.py"
     healthCheck:
       enabled: true
       path: /health
@@ -96,12 +92,55 @@ services:
       - key: DEBUG
         value: "False"
       # ⚙️ Worker Configuration
+      - key: WORKER_TYPE
+        value: "order"
       - key: WORKER_CONCURRENCY
         value: "4"
-      - key: WORKER_QUEUES
-        value: "ai_queue,notification_queue,order_queue,analytics_queue,maintenance_queue"
-      - key: CELERY_TIME_LIMIT
-        value: "300"
-      - key: CELERY_SOFT_TIME_LIMIT
-        value: "240"
+      - key: ORDER_QUEUE_SIZE
+        value: "10000"
+      - key: PROCESSING_BATCH_SIZE
+        value: "10"
+    rootDir: /
+
+  # ⚙️ All Workers Service - Все типы workers
+  - type: worker
+    name: maxxpharm-all-workers
+    env: python
+    plan: free
+    buildCommand: "pip install --no-cache-dir -r requirements.txt"
+    startCommand: "python worker_services.py"
+    healthCheck:
+      enabled: true
+      path: /health
+      gracePeriodSeconds: 30
+      intervalSeconds: 60
+    autoDeploy: true
+    envVars:
+      - key: PYTHON_VERSION
+        value: "3.11.14"
+      # 🔄 Redis Configuration
+      - key: REDIS_URL
+        value: "redis://localhost:6379/0"
+      # 📊 Logging
+      - key: LOG_LEVEL
+        value: "INFO"
+      - key: ENVIRONMENT
+        value: "production"
+      - key: DEBUG
+        value: "False"
+      # ⚙️ Worker Configuration
+      - key: WORKER_TYPE
+        value: "all"
+      - key: TOTAL_WORKERS
+        value: "12"
+      - key: ORDER_WORKERS
+        value: "4"
+      - key: PAYMENT_WORKERS
+        value: "2"
+      - key: NOTIFICATION_WORKERS
+        value: "3"
+      - key: ANALYTICS_WORKERS
+        value: "1"
+      - key: DELIVERY_WORKERS
+        value: "2"
     rootDir: /
