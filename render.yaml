@@ -1,11 +1,11 @@
 services:
-  # 🛡️ Self-Healing Telegram Bot
+  # � MAXXPHARM SaaS CRM - Уровень Uber/Amazon/Glovo
   - type: worker
     name: maxxpharm-telegram-bot
     env: python
     plan: free
     buildCommand: "pip install --no-cache-dir -r requirements.txt"
-    startCommand: "python self_healing_bot.py"
+    startCommand: "python saas_crm_bot.py"
     healthCheck:
       enabled: true
       path: /health
@@ -48,11 +48,11 @@ services:
         value: "production"
       - key: DEBUG
         value: "False"
-      # 🛡️ Self-Healing Configuration
-      - key: SELF_HEALING_ENABLED
+      # � SaaS CRM Configuration
+      - key: SAAS_MODE
         value: "True"
-      - key: MAX_RESTARTS
-        value: "10"
-      - key: HEALTH_CHECK_INTERVAL
-        value: "300"
+      - key: MULTI_TENANT
+        value: "True"
+      - key: ENTERPRISE_FEATURES
+        value: "True"
     rootDir: /
