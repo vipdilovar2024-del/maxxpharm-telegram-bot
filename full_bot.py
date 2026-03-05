@@ -99,7 +99,10 @@ print("🔥 Bot initialized successfully!")
 BOT_RUNNING = False
 
 # 🚀 МГНОВЕННАЯ ПРОВЕРКА ЗАПУСКА
+import uuid
+INSTANCE_ID = str(uuid.uuid4())[:8]  # Уникальный ID экземпляра
 print("🚀 MAXXPHARM BOT STARTING...")
+print(f"🆔 Instance ID: {INSTANCE_ID}")
 print(f"⏰ Time: {datetime.now().strftime('%H:%M:%S')}")
 print(f"🐍 Python: {sys.version}")
 print(f"📁 Working dir: {os.getcwd()}")
@@ -1198,6 +1201,7 @@ async def main():
     global BOT_RUNNING
     
     print("🚀 ASYNC MAIN FUNCTION STARTED...")
+    print(f"🆔 Instance ID: {INSTANCE_ID}")
     
     # Check if bot is already running
     if BOT_RUNNING:
@@ -1206,6 +1210,7 @@ async def main():
         return
     
     BOT_RUNNING = True
+    print(f"🟢 Bot instance {INSTANCE_ID} starting...")
     
     try:
         # Инициализация системных компонентов
@@ -1219,9 +1224,17 @@ async def main():
             print("❌ System components initialization failed!")
             return
         
-        # Delete webhook
+        # Delete webhook с принудительной остановкой
         print("🗑️ Deleting webhook...")
-        await bot.delete_webhook(drop_pending_updates=True)
+        try:
+            await bot.delete_webhook(drop_pending_updates=True)
+            await bot.set_webhook(url=None)  # Принудительно удаляем webhook
+            print("✅ Webhook deleted successfully!")
+        except Exception as e:
+            print(f"⚠️ Webhook deletion error: {e}")
+        
+        # Ждем немного для стабилизации
+        await asyncio.sleep(2)
         
         # Get bot info
         bot_info = await bot.get_me()
