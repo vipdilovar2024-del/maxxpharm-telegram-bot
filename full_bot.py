@@ -4,6 +4,11 @@
 Полная реализация как Glovo/Yandex Delivery
 """
 
+print("🔥 FILE EXECUTED - full_bot.py запущен!")
+print("🔥 PYTHON VERSION:", sys.version)
+print("🔥 WORKING DIRECTORY:", os.getcwd())
+print("🔥 FILE PATH:", __file__)
+
 import asyncio
 import logging
 import os
@@ -39,6 +44,25 @@ BOT_TOKEN = os.getenv("BOT_TOKEN")
 ADMIN_ID = int(os.getenv("ADMIN_ID", "697780123"))
 DATABASE_URL = os.getenv("DATABASE_URL", "postgresql://user:password@localhost/maxxpharm")
 
+# 🚨 Проверяем переменные окружения СРАЗУ
+print("🔥 ENVIRONMENT VARIABLES CHECK:")
+print(f"🔥 BOT_TOKEN: {'✅ Установлен' if BOT_TOKEN else '❌ НЕ УСТАНОВЛЕН'}")
+print(f"🔥 ADMIN_ID: {ADMIN_ID}")
+print(f"🔥 DATABASE_URL: {'✅ Установлен' if DATABASE_URL else '❌ НЕ УСТАНОВЛЕН'}")
+
+# 🚨 Если BOT_TOKEN пустой - выходим с ошибкой
+if not BOT_TOKEN:
+    print("❌ FATAL ERROR: BOT_TOKEN не установлен!")
+    print("❌ Проверьте Environment Variables в Render!")
+    sys.exit(1)
+
+# 🚨 Исправляем DATABASE_URL если нужно
+if DATABASE_URL and DATABASE_URL.startswith("postgresql+asyncpg://"):
+    DATABASE_URL = DATABASE_URL.replace("postgresql+asyncpg://", "postgresql://")
+    print(f"🔥 DATABASE_URL исправлен на: {DATABASE_URL}")
+
+print("🔥 ENVIRONMENT VARIABLES OK!")
+
 # Создаем директории ПЕРЕД логированием
 os.makedirs("logs", exist_ok=True)
 
@@ -48,10 +72,14 @@ logging.basicConfig(
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
     handlers=[
         logging.StreamHandler(sys.stdout),
-        logging.FileHandler('logs/bot.log'),
-        logging.FileHandler('logs/errors.log', level=logging.ERROR)
+        logging.FileHandler('logs/bot.log')
     ]
 )
+
+# Добавляем отдельный handler для ошибок
+error_handler = logging.FileHandler('logs/errors.log')
+error_handler.setLevel(logging.ERROR)
+logging.getLogger().addHandler(error_handler)
 
 logger = logging.getLogger("maxxpharm_bot")
 
@@ -1509,6 +1537,7 @@ class MaxxpharmBot:
 
 async def main():
     """Основная функция"""
+    print("🚀 BOT STARTING - main() функция вызвана!")
     print("🚀 MAXXPHARM AI-CRM Bot")
     print("🏥 Профессиональная система доставки лекарств")
     print("📋 Полная реализация как Glovo/Yandex Delivery")
@@ -1551,8 +1580,14 @@ async def main():
         traceback.print_exc()
         sys.exit(1)
 
+print("🔥 BOT STARTING - Вызываем asyncio.run(main())")
+
 if __name__ == "__main__":
+    print("🔥 BOT STARTING - Вызываем из __main__")
     asyncio.run(main())
 
 # 🚀 Запускаем напрямую для Render
+print("🔥 BOT STARTING - Прямой вызов для Render")
 asyncio.run(main())
+
+print("🔥 BOT FINISHED - Все завершено!")
