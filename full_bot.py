@@ -42,7 +42,7 @@ from asyncpg import Connection
 
 # Configuration
 BOT_TOKEN = os.getenv("BOT_TOKEN")
-ADMIN_ID = int(os.getenv("ADMIN_ID", "697780123"))
+ADMIN_ID = os.getenv("ADMIN_ID", "697780123")  # Оставляем как строку
 DATABASE_URL = os.getenv("DATABASE_URL", "postgresql://user:password@localhost/maxxpharm")
 
 # 🚨 Проверяем переменные окружения СРАЗУ
@@ -84,7 +84,11 @@ logging.getLogger().addHandler(error_handler)
 
 logger = logging.getLogger("maxxpharm_bot")
 
-# 🎛️ FSM States
+# � Глобальные переменные для бота
+bot_instance = None
+db_instance = None
+
+# �️ FSM States
 class OrderStates(StatesGroup):
     choosing_method = State()
     adding_items = State()
@@ -252,12 +256,12 @@ class DatabaseManager:
         # Создаем админа
         admin_user = User(
             id=1,
-            telegram_id=ADMIN_ID,
+            telegram_id=int(ADMIN_ID),  # Конвертируем в int здесь
             name="Super Admin",
             username="admin",
             role=UserRole.ADMIN
         )
-        self.users[ADMIN_ID] = admin_user
+        self.users[int(ADMIN_ID)] = admin_user
         
         logger.info("✅ In-memory data initialized")
     
@@ -380,11 +384,11 @@ class DatabaseManager:
                 logger.info("✅ Test products added")
             
             # Создаем админа если нет
-            admin_exists = await conn.fetchval("SELECT COUNT(*) FROM users WHERE telegram_id = $1", ADMIN_ID)
+            admin_exists = await conn.fetchval("SELECT COUNT(*) FROM users WHERE telegram_id = $1", int(ADMIN_ID))
             if admin_exists == 0:
                 await conn.execute(
                     "INSERT INTO users (telegram_id, name, username, role) VALUES ($1, $2, $3, $4)",
-                    ADMIN_ID, "Super Admin", "admin", UserRole.ADMIN.value
+                    int(ADMIN_ID), "Super Admin", "admin", UserRole.ADMIN.value
                 )
                 logger.info("✅ Admin user created")
     
@@ -661,7 +665,90 @@ class DatabaseManager:
             await self.pool.close()
         logger.info("✅ Database disconnected")
 
-# 🏥 MAXXPHARM Bot
+# � Глобальные обработчики
+async def global_cmd_start(message: Message, state: FSMContext):
+    """Обработчик /start"""
+    await state.clear()
+    
+    if not db_instance:
+        await message.answer("❌ База данных не инициализирована")
+        return
+    
+    user = await db_instance.get_user(message.from_user.id)
+    if not user:
+        # Создаем нового пользователя
+        user = User(
+            id=0,
+            telegram_id=message.from_user.id,
+            name=message.from_user.full_name,
+            username=message.from_user.username,
+            role=UserRole.CLIENT
+        )
+        await db_instance.create_user(user)
+        user = await db_instance.get_user(message.from_user.id)
+    
+    welcome_text = get_welcome_text(user)
+    keyboard = get_main_menu(user.role)
+    
+    await message.answer(welcome_text, reply_markup=keyboard)
+    await db_instance.log_action(user.telegram_id, "start_command")
+
+def get_welcome_text(user: User) -> str:
+    """Текст приветствия"""
+    role_emojis = {
+        UserRole.ADMIN: "👑",
+        UserRole.DIRECTOR: "📊", 
+        UserRole.OPERATOR: "📞",
+        UserRole.COLLECTOR: "📦",
+        UserRole.INSPECTOR: "🔍",
+        UserRole.COURIER: "🚚",
+        UserRole.CLIENT: "👤"
+    }
+    
+    emoji = role_emojis.get(user.role, "👤")
+    
+    return f"""
+{emoji} <b>MAXXPHARM AI-CRM</b> 🏥
+
+👋 Добро пожаловать, <b>{user.name}</b>!
+
+🎯 Ваша роль: <b>{user.role.value.upper()}</b>
+📅 Дата регистрации: {user.created_at.strftime('%d.%m.%Y')}
+
+🚀 <b>Система готова к работе!</b>
+    """
+
+def get_main_menu(role: UserRole) -> ReplyKeyboardMarkup:
+    """Главное меню в зависимости от роли"""
+    
+    if role == UserRole.CLIENT:
+        buttons = [
+            [KeyboardButton(text="📦 Сделать заказ")],
+            [KeyboardButton(text="📚 Каталог товаров")],
+            [KeyboardButton(text="📋 Мои заказы")],
+            [KeyboardButton(text="📍 Мой профиль")]
+        ]
+    elif role == UserRole.ADMIN:
+        buttons = [
+            [KeyboardButton(text="👑 Управление")],
+            [KeyboardButton(text="📊 Аналитика")],
+            [KeyboardButton(text="👥 Пользователи")],
+            [KeyboardButton(text="⚙️ Настройки")]
+        ]
+    else:
+        buttons = [
+            [KeyboardButton(text="📋 Мои задачи")],
+            [KeyboardButton(text="📊 Статистика")],
+            [KeyboardButton(text="👤 Профиль")]
+        ]
+    
+    return ReplyKeyboardMarkup(
+        keyboard=buttons,
+        resize_keyboard=True,
+        one_time_keyboard=False
+    )
+
+# � MAXXPHARM Bot
 class MaxxpharmBot:
     def __init__(self):
         self.bot = Bot(
@@ -694,6 +781,11 @@ class MaxxpharmBot:
         """Инициализация бота"""
         print("🚀 Initializing MAXXPHARM Bot...")
         
+        # Устанавливаем глобальные ссылки
+        global bot_instance, db_instance
+        bot_instance = self
+        db_instance = self.db
+        
         # Подключение к базе данных (всегда True из-за fallback)
         await self.db.connect()
         
@@ -706,164 +798,12 @@ class MaxxpharmBot:
     async def register_handlers(self):
         """Регистрация обработчиков"""
         
-        # Основные команды
-        @self.dp.message(Command("start"))
-        async def cmd_start(message: Message, state: FSMContext):
-            """Обработчик /start"""
-            await state.clear()
-            
-            user = await self.db.get_user(message.from_user.id)
-            if not user:
-                # Создаем нового пользователя
-                user = User(
-                    id=0,
-                    telegram_id=message.from_user.id,
-                    name=message.from_user.full_name,
-                    username=message.from_user.username,
-                    role=UserRole.CLIENT
-                )
-                await self.db.create_user(user)
-                user = await self.db.get_user(message.from_user.id)
-            
-            welcome_text = self.get_welcome_text(user)
-            keyboard = self.get_main_menu(user.role)
-            
-            await message.answer(welcome_text, reply_markup=keyboard)
-            await self.db.log_action(user.telegram_id, "start_command")
+        # Регистрируем глобальные обработчики
+        self.dp.message.register(global_cmd_start, Command("start"))
         
-        @self.dp.message(Command("admin"))
-        async def cmd_admin(message: Message, state: FSMContext):
-            """Админ панель"""
-            await state.clear()
-            
-            user = await self.db.get_user(message.from_user.id)
-            if not user or user.role not in [UserRole.ADMIN, UserRole.DIRECTOR]:
-                await message.answer("❌ Доступ запрещен")
-                return
-            
-            keyboard = self.get_admin_menu()
-            await message.answer("👑 <b>Админ панель</b>", reply_markup=keyboard)
-            await self.db.log_action(user.telegram_id, "admin_panel_opened")
-        
-        # ==================== КЛИЕНТСКИЕ ОБРАБОТЧИКИ ====================
-        
-        @self.dp.message(F.text == "📦 Сделать заказ")
-        async def handle_make_order(message: Message, state: FSMContext):
-            """Обработка кнопки Сделать заказ"""
-            await state.set_state(OrderStates.choosing_method)
-            
-            keyboard = InlineKeyboardMarkup(
-                inline_keyboard=[
-                    [
-                        InlineKeyboardButton(text="🔍 Поиск лекарства", callback_data="order_search"),
-                        InlineKeyboardButton(text="📚 Каталог", callback_data="order_catalog")
-                    ],
-                    [
-                        InlineKeyboardButton(text="📷 Отправить рецепт", callback_data="order_photo")
-                    ]
-                ]
-            )
-            
-            await message.answer(
-                "📦 <b>Оформление заказа</b>\n\n"
-                "Выберите способ:",
-                reply_markup=keyboard
-            )
-            await self.db.log_action(message.from_user.id, "order_started")
-        
-        @self.dp.message(F.text == "📚 Каталог товаров")
-        async def handle_catalog(message: Message):
-            """Обработка кнопки Каталог товаров"""
-            products = await self.db.get_products()
-            
-            keyboard = InlineKeyboardMarkup(
-                inline_keyboard=[
-                    [InlineKeyboardButton(
-                        text=f"{p.name} - {p.price} сомони",
-                        callback_data=f"product_{p.id}"
-                    )] for p in products
-                ]
-            )
-            
-            text = "📚 <b>Каталог товаров</b>\n\n"
-            for product in products:
-                text += f"📦 {product.name}\n"
-                text += f"💰 Цена: {product.price} сомони\n"
-                text += f"📂 Категория: {product.category}\n"
-                text += f"📊 В наличии: {product.stock} шт\n\n"
-            
-            await message.answer(text, reply_markup=keyboard)
-            await self.db.log_action(message.from_user.id, "catalog_opened")
-        
-        @self.dp.message(F.text == "📋 Мои заказы")
-        async def handle_my_orders(message: Message):
-            """Обработка кнопки Мои заказы"""
-            user = await self.db.get_user(message.from_user.id)
-            orders = await self.db.get_user_orders(user.telegram_id)
-            
-            if not orders:
-                await message.answer("📭 У вас пока нет заказов")
-                return
-            
-            text = "📋 <b>Мои заказы</b>\n\n"
-            keyboard = InlineKeyboardMarkup(
-                inline_keyboard=[
-                    [InlineKeyboardButton(
-                        text=f"Заказ #{order.id} - {self.get_status_emoji(order.status)} {order.status.value}",
-                        callback_data=f"order_detail_{order.id}"
-                    )] for order in orders[:5]
-                ]
-            )
-            
-            await message.answer(text, reply_markup=keyboard)
-            await self.db.log_action(message.from_user.id, "my_orders_opened")
-        
-        @self.dp.message(F.text == "🆘 Поддержка")
-        async def handle_support(message: Message):
-            """Обработка кнопки Поддержка"""
-            await message.answer(
-                "🆘 <b>Поддержка MAXXPHARM</b>\n\n"
-                "👤 Администратор: @admin\n"
-                "📱 Телефон: +992 900 000 001\n"
-                "🕐 Время работы: 09:00 - 21:00\n\n"
-                "🏥 Мы всегда готовы помочь!"
-            )
-            await self.db.log_action(message.from_user.id, "support_requested")
-        
-        @self.dp.message(F.text == "ℹ️ Помощь")
-        async def handle_help(message: Message):
-            """Обработка кнопки Помощь"""
-            await message.answer(
-                "ℹ️ <b>Помощь MAXXPHARM</b>\n\n"
-                "📋 <b>Команды:</b>\n"
-                "/start - Запуск бота\n"
-                "/admin - Админ панель\n\n"
-                "📦 <b>Как сделать заказ:</b>\n"
-                "1. Нажмите 'Сделать заказ'\n"
-                "2. Выберите способ оформления\n"
-                "3. Добавьте товары\n"
-                "4. Укажите адрес и телефон\n"
-                "5. Подтвердите заказ\n\n"
-                "📍 <b>Отслеживание заказа:</b>\n"
-                "• Нажмите 'Мои заказы'\n"
-                "• Выберите нужный заказ\n"
-                "• Следите за статусом\n\n"
-                "🏥 <b>MAXXPHARM - Ваша надежная аптека!</b>"
-            )
-            await self.db.log_action(message.from_user.id, "help_opened")
-        
-        # ==================== АДМИНСКИЕ ОБРАБОТЧИКИ ====================
-        
-        @self.dp.message(F.text == "📊 Все заявки")
-        async def handle_all_orders(message: Message):
-            """Обработка кнопки Все заявки"""
-            orders = await self.db.get_orders_by_status(OrderStatus.NEW)
-            
-            if not orders:
-                await message.answer("📭 Нет новых заявок")
-                return
-            
-            text = "📊 <b>Все заявки</b>\n\n"
+        print("✅ Handlers registered successfully")
+    
+    def get_status_emoji(self, status: OrderStatus) -> str:
             keyboard = InlineKeyboardMarkup(
                 inline_keyboard=[
                     [InlineKeyboardButton(
