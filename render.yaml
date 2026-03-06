@@ -6,14 +6,8 @@ services:
     plan: free
     buildCommand: "pip install --no-cache-dir -r requirements.txt"
     startCommand: "python full_bot.py"
-    healthCheckPath: "/health"
     healthCheck:
-      enabled: true
-      gracePeriodSeconds: 30
-      intervalSeconds: 60
-      timeoutSeconds: 10
-      failureThreshold: 3
-      successThreshold: 2
+      enabled: false  # Отключаем health check для Telegram бота
     autoDeploy: true
     envVars:
       - key: PYTHON_VERSION

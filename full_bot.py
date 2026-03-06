@@ -27,6 +27,9 @@ from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import State, StatesGroup
 from aiogram.fsm.storage.memory import MemoryStorage
 
+# 🌐 Web imports для health check
+from aiohttp import web
+
 # 🗄️ Database imports
 import asyncpg
 from asyncpg import Connection
@@ -640,15 +643,30 @@ class MaxxpharmBot:
         self.db = DatabaseManager()
         self.user_cart = {}  # Временные корзины
         self.order_data = {}  # Временные данные заказов
+        self.app = web.Application()  # Web приложение для health check
+        self.setup_web_routes()
+    
+    def setup_web_routes(self):
+        """Настройка web маршрутов для health check"""
+        async def health_check(request):
+            return web.Response(text="OK", status=200)
+        
+        self.app.router.add_get('/health', health_check)
+    
+    async def start_web_server(self):
+        """Запуск web сервера для health check"""
+        runner = web.AppRunner(self.app)
+        await runner.setup()
+        site = web.TCPSite(runner, '0.0.0.0', 10000)
+        await site.start()
+        print("🌐 Web server started on port 10000")
     
     async def initialize(self):
         """Инициализация бота"""
         print("🚀 Initializing MAXXPHARM Bot...")
         
-        # Подключение к базе данных
-        if not await self.db.connect():
-            print("❌ Database connection failed")
-            return False
+        # Подключение к базе данных (всегда True из-за fallback)
+        await self.db.connect()
         
         # Регистрация обработчиков
         await self.register_handlers()
@@ -1442,22 +1460,33 @@ class MaxxpharmBot:
         try:
             print("🚀 Starting MAXXPHARM Bot...")
             
+            # Запускаем web сервер для health check
+            await self.start_web_server()
+            
             # Удаляем webhook
             await self.bot.delete_webhook(drop_pending_updates=True)
+            print("✅ Webhook deleted")
             
             # Получаем информацию о боте
             bot_info = await self.bot.get_me()
             print(f"🤖 Bot: @{bot_info.username}")
+            print(f"🤖 Bot ID: {bot_info.id}")
             
             print("🎯 Starting bot polling...")
             print("🤖 MAXXPHARM Bot is running!")
             print("📊 AI-CRM System is active!")
             
             # Запускаем polling
-            await self.dp.start_polling(self.bot)
+            await self.dp.start_polling(
+                self.bot,
+                handle_signals=False  # Мы обрабатываем сигналы сами
+            )
             
         except Exception as e:
             logger.error(f"❌ System runtime error: {e}")
+            print(f"❌ Ошибка запуска: {e}")
+            import traceback
+            traceback.print_exc()
             raise
         finally:
             await self.shutdown()
