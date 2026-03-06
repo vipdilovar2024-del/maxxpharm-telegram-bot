@@ -1,21 +1,21 @@
 #!/usr/bin/env python3
 """
-🤖 MAXXPHARM AI-CRM TELEGRAM BOT
-Полнофункциональный CRM с AI-анализом и автоматизацией
+🏥 MAXXPHARM AI-CRM - Полная система доставки лекарств
+Профессиональная реализация по ТЗ
 """
-
-# 🔥 FILE STARTED - ОТЛАДОЧНЫЙ PRINT
-print("🔥 FILE STARTED - full_bot.py загружен!")
 
 import asyncio
 import logging
-import sys
 import os
+import sys
 from datetime import datetime, timedelta
 from typing import Dict, List, Any, Optional
 from dataclasses import dataclass
 from enum import Enum
 import json
+
+# 🔥 FILE STARTED - ОТЛАДОЧНЫЙ PRINT
+print("🔥 FILE STARTED - full_bot.py загружен!")
 
 # 🤖 Telegram imports
 from aiogram import Bot, Dispatcher, types, F
@@ -31,28 +31,14 @@ from aiogram.fsm.storage.memory import MemoryStorage
 # 🗄️ Database imports
 import asyncpg
 from asyncpg import Connection
-import database
 
-# 🧠 AI Brain imports
-import ai_brain
-
-# 🔄 Data Pipeline imports
-import data_pipeline
-
-# ⏰ AI Scheduler imports
-import ai_scheduler
-
-# � Configuration
+# Configuration
 BOT_TOKEN = os.getenv("BOT_TOKEN")
 ADMIN_ID = int(os.getenv("ADMIN_ID", "697780123"))
 RENDER = os.getenv("RENDER", "False").lower() == "true"
 
-# 🗄️ Database Configuration
-DB_HOST = os.getenv("DB_HOST", "localhost")
-DB_PORT = int(os.getenv("DB_PORT", "5432"))
-DB_USER = os.getenv("DB_USER", "postgres")
-DB_PASSWORD = os.getenv("DB_PASSWORD", "")
-DB_NAME = os.getenv("DB_NAME", "maxxpharm_db")
+# Database Configuration
+DATABASE_URL = os.getenv("DATABASE_URL", "postgresql://user:password@localhost/maxxpharm")
 
 # 🧠 AI Configuration
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
