@@ -1,1 +1,1 @@
-worker: python full_bot.py
+web: python simple_bot.py
