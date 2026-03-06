@@ -1529,9 +1529,12 @@ async def main():
             sys.exit(1)
         
         # Создаем и запускаем бота
+        print("🔧 Creating MAXXPHARM Bot instance...")
         bot = MaxxpharmBot()
         
+        print("🔧 Initializing bot...")
         if await bot.initialize():
+            print("🔧 Starting bot...")
             await bot.start()
         else:
             logger.error("❌ Failed to initialize MAXXPHARM Bot")
@@ -1544,7 +1547,12 @@ async def main():
     except Exception as e:
         logger.error(f"❌ Fatal system error: {e}")
         print(f"❌ Фатальная ошибка системы: {e}")
+        import traceback
+        traceback.print_exc()
         sys.exit(1)
 
 if __name__ == "__main__":
     asyncio.run(main())
+
+# 🚀 Запускаем напрямую для Render
+asyncio.run(main())
