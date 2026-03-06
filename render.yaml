@@ -2,19 +2,20 @@ services:
   # 🚀 MAXXPHARM Production Bot - Объединенный бот со всеми возможностями
   - type: web
     name: maxxpharm-telegram-bot
-    env: python
+    runtime: python
     plan: free
-    buildCommand: "pip install --no-cache-dir -r requirements.txt"
-    startCommand: "python full_bot.py"  # 🔥 Убедимся что запускаем правильный файл
-    healthCheck:
-      enabled: false  # Отключаем health check для Telegram бота
     autoDeploy: true
+    buildCommand: "pip install -r requirements.txt"
+    startCommand: "python simple_bot.py"
     envVars:
       - key: PYTHON_VERSION
-        value: "3.11.14"
-      # 🤖 Bot Configuration
+        value: "3.11"
       - key: BOT_TOKEN
-        value: "7759398408:AAE8sTBDYO9cf9tjbCu6ZcrvPQxy9j28KGI"
+        sync: false
+      - key: ADMIN_ID
+        sync: false
+      - key: DATABASE_URL
+        value: "sqlite:///./bot.db"
       - key: ADMIN_ID
         value: "697780123"
       - key: RENDER
