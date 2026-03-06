@@ -17,6 +17,7 @@ import json
 # 🤖 Telegram imports
 from aiogram import Bot, Dispatcher, types, F
 from aiogram.filters import Command
+from aiogram.client.default import DefaultBotProperties
 from aiogram.types import (
     Message, CallbackQuery, ReplyKeyboardMarkup, KeyboardButton,
     InlineKeyboardMarkup, InlineKeyboardButton, ReplyKeyboardRemove,
@@ -35,6 +36,9 @@ BOT_TOKEN = os.getenv("BOT_TOKEN")
 ADMIN_ID = int(os.getenv("ADMIN_ID", "697780123"))
 DATABASE_URL = os.getenv("DATABASE_URL", "postgresql://user:password@localhost/maxxpharm")
 
+# Создаем директории ПЕРЕД логированием
+os.makedirs("logs", exist_ok=True)
+
 # Настройка логирования
 logging.basicConfig(
     level=logging.INFO,
@@ -47,9 +51,6 @@ logging.basicConfig(
 )
 
 logger = logging.getLogger("maxxpharm_bot")
-
-# Создаем директории
-os.makedirs("logs", exist_ok=True)
 
 # 🎛️ FSM States
 class OrderStates(StatesGroup):
@@ -631,7 +632,10 @@ class DatabaseManager:
 # 🏥 MAXXPHARM Bot
 class MaxxpharmBot:
     def __init__(self):
-        self.bot = Bot(token=BOT_TOKEN, parse_mode="HTML")
+        self.bot = Bot(
+            token=BOT_TOKEN,
+            default=DefaultBotProperties(parse_mode="HTML")
+        )
         self.dp = Dispatcher(storage=MemoryStorage())
         self.db = DatabaseManager()
         self.user_cart = {}  # Временные корзины
@@ -1482,10 +1486,17 @@ async def main():
     print("🗄️ Database: Connecting...")
     print()
     
+    # 🔥 Проверяем переменные окружения
+    print(f"🔥 BOT_TOKEN: {'✅ Установлен' if BOT_TOKEN else '❌ НЕ УСТАНОВЛЕН'}")
+    print(f"🔥 ADMIN_ID: {ADMIN_ID}")
+    print(f"🔥 DATABASE_URL: {'✅ Установлен' if DATABASE_URL else '❌ НЕ УСТАНОВЛЕН'}")
+    print()
+    
     try:
         # Проверяем переменные окружения
         if not BOT_TOKEN:
             logger.error("❌ BOT_TOKEN environment variable is required")
+            print("❌ ОШИБКА: BOT_TOKEN не установлен!")
             sys.exit(1)
         
         # Создаем и запускаем бота
@@ -1495,12 +1506,15 @@ async def main():
             await bot.start()
         else:
             logger.error("❌ Failed to initialize MAXXPHARM Bot")
+            print("❌ ОШИБКА: Не удалось инициализировать бота!")
             sys.exit(1)
             
     except KeyboardInterrupt:
         logger.info("🛑 System stopped by user")
+        print("🛑 Система остановлена пользователем")
     except Exception as e:
         logger.error(f"❌ Fatal system error: {e}")
+        print(f"❌ Фатальная ошибка системы: {e}")
         sys.exit(1)
 
 if __name__ == "__main__":
