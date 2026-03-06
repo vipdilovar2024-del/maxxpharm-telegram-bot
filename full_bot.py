@@ -367,15 +367,15 @@ def get_main_menu(user_id):
         keyboard = ReplyKeyboardMarkup(
             keyboard=[
                 [
-                    KeyboardButton(text="🛍 Каталог")
+                    KeyboardButton(text="� Сделать заказ")
                 ],
                 [
-                    KeyboardButton(text="🔍 Поиск"),
-                    KeyboardButton(text="🛒 Корзина")
+                    KeyboardButton(text="� Каталог товаров"),
+                    KeyboardButton(text="� Мои заказы")
                 ],
                 [
-                    KeyboardButton(text="📦 Мои заказы"),
-                    KeyboardButton(text="📞 Поддержка")
+                    KeyboardButton(text="� Поддержка"),
+                    KeyboardButton(text="ℹ️ Помощь")
                 ]
             ],
             resize_keyboard=True
@@ -470,9 +470,25 @@ async def cmd_start(message: types.Message):
     if role in [UserRole.SUPER_ADMIN, UserRole.ADMIN, UserRole.DIRECTOR]:
         create_session(user_id, role)
         expires = SESSIONS[user_id]["expires"]
-        welcome_text = f"👋 Добро пожаловать, {message.from_user.full_name}!\n\n🔐 Ваша роль: {role}\n⏰ Сессия активна до: {expires}\n\nВыберите действие из меню ниже:"
+        welcome_text = f"👋 Добро пожаловать, {message.from_user.full_name}!\n\n🔐 Ваша роль: {role}\n⏰ Сессия активна до: {expires}\n\n🚀 <b>MAXXPHARM AI-CRM Bot</b> активен!\n🧠 AI Brain Engine работает!\n🔄 Data Pipeline собирает данные!\n⏰ AI Scheduler планирует задачи!"
     else:
-        welcome_text = "Добро пожаловать в MAXXPHARM! 🏥\n\nВыберите действие из меню:"
+        welcome_text = (
+            "🏥 <b>Добро пожаловать в MAXXPHARM!</b>\n\n"
+            "🚀 <b>AI-CRM Система доставки лекарств</b>\n\n"
+            "🧠 AI Brain Engine: активен\n"
+            "🔄 Data Pipeline: работает\n"
+            "⏰ AI Scheduler: готов\n"
+            "🗄️ База данных: подключена\n\n"
+            "📦 <b>Наши услуги:</b>\n"
+            "• Доставка лекарств на дом\n"
+            "• Консультации фармацевта\n"
+            "• Заказ по рецепту\n"
+            "• Быстрая доставка\n\n"
+            "📞 <b>Контакты:</b>\n"
+            "• Телефон: +992 900 000 001\n"
+            "• Время работы: 09:00 - 21:00\n\n"
+            "🛒 <b>Сделайте ваш первый заказ!</b>"
+        )
     
     menu = get_main_menu(user_id)
     print(f"🔥 Sending menu to user {user_id}")
