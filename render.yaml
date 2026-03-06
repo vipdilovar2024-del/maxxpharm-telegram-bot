@@ -5,7 +5,7 @@ services:
     env: python
     plan: free
     buildCommand: "pip install --no-cache-dir -r requirements.txt"
-    startCommand: "python simple_production_bot.py"
+    startCommand: "python maxxpharm_system.py"
     healthCheckPath: "/health"
     healthCheck:
       enabled: true
