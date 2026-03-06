@@ -138,10 +138,18 @@ class Notification:
 class DatabaseManager:
     def __init__(self):
         self.pool = None
+        self.in_memory_mode = False
+        self.users = {}
+        self.products = []
+        self.orders = []
+        self.notifications = []
+        self.action_logs = []
+        self.order_counter = 1
     
     async def connect(self):
         """Подключение к базе данных"""
         try:
+            # Пробуем подключиться к базе данных
             self.pool = await asyncpg.create_pool(DATABASE_URL)
             logger.info("✅ Database connected")
             await self.create_tables()
@@ -149,7 +157,76 @@ class DatabaseManager:
             return True
         except Exception as e:
             logger.error(f"❌ Database connection failed: {e}")
-            return False
+            # Если база недоступна, работаем в режиме in-memory
+            logger.warning("⚠️ Working in in-memory mode (no database)")
+            self.in_memory_mode = True
+            await self.init_in_memory_data()
+            return True
+    
+    async def init_in_memory_data(self):
+        """Инициализация данных в памяти"""
+        logger.info("📦 Initializing in-memory data...")
+        
+        # Создаем тестовые товары
+        self.products = [
+            Product(
+                id=1,
+                name="Парацетамол",
+                price=50.0,
+                category="Обезболивающие",
+                description="Обезболивающее и жаропонижающее",
+                stock=100,
+                prescription_required=False
+            ),
+            Product(
+                id=2,
+                name="Ибупрофен",
+                price=80.0,
+                category="Обезболивающие",
+                description="Противовоспалительное средство",
+                stock=50,
+                prescription_required=False
+            ),
+            Product(
+                id=3,
+                name="Витамин C",
+                price=120.0,
+                category="Витамины",
+                description="Аскорбиновая кислота 500мг",
+                stock=150,
+                prescription_required=False
+            ),
+            Product(
+                id=4,
+                name="Амоксициллин",
+                price=150.0,
+                category="Антибиотики",
+                description="Антибиотик широкого спектра",
+                stock=40,
+                prescription_required=True
+            ),
+            Product(
+                id=5,
+                name="Арбидол",
+                price=300.0,
+                category="Противовирусные",
+                description="Противовирусный препарат",
+                stock=60,
+                prescription_required=False
+            ),
+        ]
+        
+        # Создаем админа
+        admin_user = User(
+            id=1,
+            telegram_id=ADMIN_ID,
+            name="Super Admin",
+            username="admin",
+            role=UserRole.ADMIN
+        )
+        self.users[ADMIN_ID] = admin_user
+        
+        logger.info("✅ In-memory data initialized")
     
     async def create_tables(self):
         """Создание таблиц"""
@@ -280,6 +357,10 @@ class DatabaseManager:
     
     async def create_user(self, user: User) -> bool:
         """Создание пользователя"""
+        if self.in_memory_mode:
+            self.users[user.telegram_id] = user
+            return True
+        
         async with self.pool.acquire() as conn:
             try:
                 await conn.execute(
@@ -299,6 +380,9 @@ class DatabaseManager:
     
     async def get_user(self, telegram_id: int) -> Optional[User]:
         """Получение пользователя"""
+        if self.in_memory_mode:
+            return self.users.get(telegram_id)
+        
         async with self.pool.acquire() as conn:
             row = await conn.fetchrow("SELECT * FROM users WHERE telegram_id = $1", telegram_id)
             if row:
@@ -317,6 +401,13 @@ class DatabaseManager:
     
     async def create_order(self, order: Order) -> int:
         """Создание заказа"""
+        if self.in_memory_mode:
+            order.id = self.order_counter
+            self.order_counter += 1
+            self.orders.append(order)
+            await self.log_action(order.user_id, "order_created", {"order_id": order.id})
+            return order.id
+        
         async with self.pool.acquire() as conn:
             order_id = await conn.fetchval(
                 """
@@ -341,6 +432,9 @@ class DatabaseManager:
     
     async def get_orders_by_status(self, status: OrderStatus) -> List[Order]:
         """Получение заказов по статусу"""
+        if self.in_memory_mode:
+            return [order for order in self.orders if order.status == status]
+        
         async with self.pool.acquire() as conn:
             rows = await conn.fetch("SELECT * FROM orders WHERE status = $1 ORDER BY created_at", status.value)
             return [self._row_to_order(row) for row in rows]
@@ -377,12 +471,18 @@ class DatabaseManager:
     
     async def get_products(self) -> List[Product]:
         """Получение товаров"""
+        if self.in_memory_mode:
+            return self.products
+        
         async with self.pool.acquire() as conn:
             rows = await conn.fetch("SELECT * FROM products ORDER BY name")
             return [self._row_to_product(row) for row in rows]
     
     async def get_user_orders(self, user_id: int) -> List[Order]:
         """Получение заказов пользователя"""
+        if self.in_memory_mode:
+            return [order for order in self.orders if order.user_id == user_id]
+        
         async with self.pool.acquire() as conn:
             rows = await conn.fetch("SELECT * FROM orders WHERE user_id = $1 ORDER BY created_at DESC", user_id)
             return [self._row_to_order(row) for row in rows]
@@ -410,6 +510,40 @@ class DatabaseManager:
     
     async def get_analytics(self) -> Dict:
         """Получение аналитики"""
+        if self.in_memory_mode:
+            total_orders = len(self.orders)
+            today_orders = len([o for o in self.orders if o.created_at.date() == datetime.now().date()])
+            delivered_orders = len([o for o in self.orders if o.status == OrderStatus.DELIVERED])
+            
+            total_users = len(self.users)
+            active_users = len([u for u in self.users.values() if u.is_active])
+            
+            role_stats = {}
+            for user in self.users.values():
+                role = user.role.value
+                role_stats[role] = role_stats.get(role, 0) + 1
+            
+            total_revenue = sum(o.total_amount for o in self.orders if o.status == OrderStatus.DELIVERED)
+            today_revenue = sum(o.total_amount for o in self.orders 
+                              if o.status == OrderStatus.DELIVERED and o.created_at.date() == datetime.now().date())
+            
+            return {
+                "orders": {
+                    "total": total_orders,
+                    "today": today_orders,
+                    "delivered": delivered_orders
+                },
+                "users": {
+                    "total": total_users,
+                    "active": active_users,
+                    "by_role": role_stats
+                },
+                "revenue": {
+                    "total": total_revenue,
+                    "today": today_revenue
+                }
+            }
+        
         async with self.pool.acquire() as conn:
             # Статистика заказов
             total_orders = await conn.fetchval("SELECT COUNT(*) FROM orders")
@@ -446,6 +580,15 @@ class DatabaseManager:
     
     async def log_action(self, user_id: int, action: str, details: Dict = None):
         """Логирование действия"""
+        if self.in_memory_mode:
+            self.action_logs.append({
+                'user_id': user_id,
+                'action': action,
+                'details': details or {},
+                'created_at': datetime.now()
+            })
+            return
+        
         async with self.pool.acquire() as conn:
             await conn.execute(
                 "INSERT INTO action_logs (user_id, action, details) VALUES ($1, $2, $3)",
@@ -483,6 +626,7 @@ class DatabaseManager:
         """Отключение от базы данных"""
         if self.pool:
             await self.pool.close()
+        logger.info("✅ Database disconnected")
 
 # 🏥 MAXXPHARM Bot
 class MaxxpharmBot:
