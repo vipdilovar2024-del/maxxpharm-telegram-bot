@@ -4,6 +4,9 @@
 Полная реализация как Glovo/Yandex Delivery
 """
 
+import sys
+import os
+
 print("🔥 FILE EXECUTED - full_bot.py запущен!")
 print("🔥 PYTHON VERSION:", sys.version)
 print("🔥 WORKING DIRECTORY:", os.getcwd())
@@ -11,8 +14,6 @@ print("🔥 FILE PATH:", __file__)
 
 import asyncio
 import logging
-import os
-import sys
 from datetime import datetime, timedelta
 from typing import Dict, List, Any, Optional
 from dataclasses import dataclass, field
