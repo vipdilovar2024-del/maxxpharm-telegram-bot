@@ -27,6 +27,9 @@ try:
 except ImportError:
     print("⚠️ python-dotenv не установлен, используем системные переменные")
 
+# 🎨 Добавляем красивые импорты для стиля
+from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
+
 # Configuration
 BOT_TOKEN = os.getenv("BOT_TOKEN")
 ADMIN_ID = os.getenv("ADMIN_ID", "697780123")  # Строка!
@@ -158,13 +161,13 @@ class SimpleMaxxpharmBot:
 • Отчеты по доставкам
                 """
                 buttons = [
-                    [KeyboardButton(text="📊 Статистика"), KeyboardButton(text="� Финансы")],
-                    [KeyboardButton(text="� Аналитика"), KeyboardButton(text="📋 Отчеты")],
+                    [KeyboardButton(text="📊 Статистика"), KeyboardButton(text="💰 Финансы")],
+                    [KeyboardButton(text="📈 Аналитика"), KeyboardButton(text="📋 Отчеты")],
                     [KeyboardButton(text="👥 Сотрудники"), KeyboardButton(text="🚚 Доставка")]
                 ]
                 
             elif user.role == UserRole.OPERATOR:
-                role_emoji = "�"
+                role_emoji = "📞"
                 welcome_text = f"""
 {role_emoji} <b>MAXXPHARM AI-CRM</b> 🏥
 
@@ -175,7 +178,7 @@ class SimpleMaxxpharmBot:
 
 🚀 <b>Система готова к работе!</b>
 
-� <b>Доступные функции:</b>
+📞 <b>Доступные функции:</b>
 • Прием заявок
 • Обработка заказов
 • Связь с клиентами
@@ -252,8 +255,8 @@ class SimpleMaxxpharmBot:
                 """
                 buttons = [
                     [KeyboardButton(text="📦 Сделать заказ"), KeyboardButton(text="📚 Каталог")],
-                    [KeyboardButton(text="� Мои заказы"), KeyboardButton(text="📍 Доставка")],
-                    [KeyboardButton(text="� Поддержка"), KeyboardButton(text="ℹ️ О нас")]
+                    [KeyboardButton(text="📋 Мои заказы"), KeyboardButton(text="📍 Доставка")],
+                    [KeyboardButton(text="📞 Поддержка"), KeyboardButton(text="ℹ️ О нас")]
                 ]
             
             keyboard = ReplyKeyboardMarkup(
