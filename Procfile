@@ -1,1 +1,1 @@
-web: python simple_bot.py
+web: python maxxpharm_bot.py
