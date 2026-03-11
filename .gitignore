@@ -1,0 +1,35 @@
+# 🏥 MAXXPHARM AI-CRM - Git Ignore
+
+# 🤖 Bot files
+*.pyc
+__pycache__/
+*.pyo
+
+# 📁 Environment files
+.env
+.env.local
+.env.production
+
+# 🗄️ Database
+*.db
+*.sqlite
+*.sqlite3
+
+# 📊 Logs
+logs/
+*.log
+
+# 🔧 IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# 📦 Dependencies
+node_modules/
+venv/
+env/
+
+# 🖥️ OS
+.DS_Store
+Thumbs.db

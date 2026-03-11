@@ -1,15 +1,33 @@
-from .user import User
-from .product import Product
-from .category import Category
-from .order import Order
-from .order_item import OrderItem
-from .log import Log
+"""
+📊 Модели данных MAXXPHARM CRM
+"""
+
+from .database import (
+    Base,
+    User,
+    UserRole,
+    Pharmacy,
+    Order,
+    OrderStatus,
+    OrderItem,
+    Payment,
+    PaymentType,
+    Debt,
+    Location,
+    ActivityLog
+)
 
 __all__ = [
+    "Base",
     "User",
-    "Product", 
-    "Category",
+    "UserRole", 
+    "Pharmacy",
     "Order",
+    "OrderStatus",
     "OrderItem",
-    "Log"
+    "Payment",
+    "PaymentType",
+    "Debt",
+    "Location",
+    "ActivityLog"
 ]

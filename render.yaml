@@ -1,24 +1,129 @@
 services:
+  # 🏥 MAXXPHARM CRM Web Service
   - type: web
-    name: maxxpharm-telegram-bot
+    name: maxxpharm-crm
     runtime: python
-    plan: free
+    plan: starter
+    repo: https://github.com/vipdilovar2024-del/maxxpharm-crm.git
+    rootDir: .
+    buildCommand: pip install -r requirements.txt
+    startCommand: python run_crm.py
+    healthCheckPath: /health
     autoDeploy: true
-    buildCommand: "pip install -r requirements.txt"
-    startCommand: "python simple_bot.py"
+    
+    # 🌐 Environment Variables
     envVars:
-      - key: PYTHON_VERSION
-        value: "3.11"
       - key: BOT_TOKEN
-        sync: false
-      - key: ADMIN_ID
-        sync: false
+        value: 8357898408:AAEA5TBDYO9cf9tjbCu6ZcrvPQxy9j28KGI
+        type: secret
+      - key: ADMIN_TELEGRAM_ID
+        value: 697780123
+        type: secret
       - key: DATABASE_URL
-        value: "sqlite:///./bot.db"
+        value: postgresql://solimfarm_db_steg_user:B4a9T78li3OZlOfVu3f6bF9iBfLWJfu9@dpg-d6ane6cr85hc73ep4qd0-a.oregon-postgres.render.com/solimfarm_db_steg
+        type: secret
+      - key: OPENAI_API_KEY
+        sync: false
+      - key: GOOGLE_MAPS_API_KEY
+        sync: false
+      - key: SECRET_KEY
+        generateValue: true
+      - key: DEBUG
+        value: false
+      - key: HOST
+        value: 0.0.0.0
+      - key: PORT
+        value: 8000
+    
+    # 🗄️ PostgreSQL Database
+    databases:
+      - name: maxxpharm-crm-db
+        databaseName: maxxpharm_crm
+        user: maxxpharm_user
+    
+    # 🔄 Redis (optional for caching)
+    redis:
+      - name: maxxpharm-redis
+        ipAllowList: []
+        
+    # 📊 Health Checks
     healthCheck:
       path: /health
-      initialDelaySeconds: 30
-      periodSeconds: 10
-      timeoutSeconds: 5
-      failureThreshold: 3
-    rootDir: /
+      intervalSeconds: 30
+      timeoutSeconds: 10
+      gracePeriodSeconds: 60
+      
+    # 🔧 Build Configuration
+    build:
+      commands:
+        - pip install --upgrade pip
+        - pip install -r requirements.txt
+        
+    # 🌍 Region
+    region: oregon
+    
+    # 📦 Instance Configuration
+    instance:
+      size: starter
+      cpu: 0.5
+      memory: 512MB
+      
+    # 🔄 Auto-scaling
+    autoScale:
+      enabled: false
+      minInstances: 1
+      maxInstances: 1
+      
+    # 📊 Monitoring
+    monitoring:
+      enabled: true
+      
+    # 🔐 Security
+  security:
+    allowedIPs: []
+    
+  # 🏥 MAXXPHARM CRM Background Worker (for bot polling)
+  - type: worker
+    name: maxxpharm-crm-bot
+    runtime: python
+    plan: starter
+    repo: https://github.com/vipdilovar2024-del/maxxpharm-crm.git
+    rootDir: .
+    buildCommand: pip install -r requirements.txt
+    startCommand: python -c "from src.main import start_bot_polling; import asyncio; asyncio.run(start_bot_polling())"
+    autoDeploy: true
+    
+    # 🌐 Environment Variables (same as web service)
+    envVars:
+      - key: BOT_TOKEN
+        value: 8357898408:AAEA5TBDYO9cf9tjbCu6ZcrvPQxy9j28KGI
+        type: secret
+      - key: ADMIN_TELEGRAM_ID
+        value: 697780123
+        type: secret
+      - key: DATABASE_URL
+        value: postgresql://solimfarm_db_steg_user:B4a9T78li3OZlOfVu3f6bF9iBfLWJfu9@dpg-d6ane6cr85hc73ep4qd0-a.oregon-postgres.render.com/solimfarm_db_steg
+        type: secret
+      - key: OPENAI_API_KEY
+        sync: false
+      - key: GOOGLE_MAPS_API_KEY
+        sync: false
+      - key: SECRET_KEY
+        generateValue: true
+      - key: DEBUG
+        value: false
+        
+    # 🔧 Build Configuration
+    build:
+      commands:
+        - pip install --upgrade pip
+        - pip install -r requirements.txt
+        
+    # 🌍 Region
+    region: oregon
+    
+    # 📦 Instance Configuration
+    instance:
+      size: starter
+      cpu: 0.5
+      memory: 512MB

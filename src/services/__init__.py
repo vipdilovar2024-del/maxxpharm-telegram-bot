@@ -1,13 +1,19 @@
+"""
+🔧 Сервисы MAXXPHARM CRM
+"""
+
 from .user_service import UserService
-from .product_service import ProductService
 from .order_service import OrderService
-from .auth_service import AuthService
-from .log_service import LogService
+from .payment_service import PaymentService
+from .analytics_service import AnalyticsService
+from .notification_service import NotificationService
+from .location_service import LocationService
 
 __all__ = [
     "UserService",
-    "ProductService",
     "OrderService", 
-    "AuthService",
-    "LogService"
+    "PaymentService",
+    "AnalyticsService",
+    "NotificationService",
+    "LocationService"
 ]

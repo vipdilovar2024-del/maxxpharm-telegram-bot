@@ -1,1 +1,1 @@
-web: python maxxpharm_bot.py
+web: python run_crm.py

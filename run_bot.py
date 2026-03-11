@@ -1,37 +1,45 @@
 #!/usr/bin/env python3
 """
-🏥 MAXXPHARM CRM - Professional Pharmacy Management System
+🏥 MAXXPHARM AI-CRM - Запуск бота локально
 """
 
 import sys
 import os
 import asyncio
 import logging
+from datetime import datetime
+from enum import Enum
+from typing import Dict, List, Optional
 
-# Добавляем путь к src
-sys.path.append(os.path.join(os.path.dirname(__file__), 'src'))
+# 🤖 Telegram imports
+from aiogram import Bot, Dispatcher, types, F
+from aiogram.filters import Command
+from aiogram.client.default import DefaultBotProperties
+from aiogram.types import Message, ReplyKeyboardMarkup, KeyboardButton, InlineKeyboardMarkup, InlineKeyboardButton
+from aiogram.fsm.context import FSMContext
+from aiogram.fsm.storage.memory import MemoryStorage
 
-# Импортируем наше приложение
-from main import app
+# 🌐 Web imports для health check
+from aiohttp import web
+
+# 📦 Прямая установка токена
+BOT_TOKEN = "8357898408:AAEA5TBDYO9cf9tjbCu6ZcrvPQxy9j28KGI"
+ADMIN_ID = "697780123"
+
+print("🔥 MAXXPHARM BOT STARTING!")
+print(f"🔥 BOT_TOKEN: {'✅' if BOT_TOKEN else '❌'}")
+print(f"🔥 ADMIN_ID: {ADMIN_ID}")
+
+if not BOT_TOKEN:
+    print("❌ FATAL: BOT_TOKEN не установлен!")
+    sys.exit(1)
 
 # Настройка логирования
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
-)
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
 
-if __name__ == "__main__":
-    import uvicorn
-    
-    logger.info("🚀 Starting MAXXPHARM CRM...")
-    
-    uvicorn.run(
-        app,
-        host="0.0.0.0",
-        port=8000,
-        log_level="info"
-    )
+# 🎛 Enums
+class OrderStatus(Enum):
     CREATED = "📝 Заявка создана"
     AWAITING_PAYMENT = "💳 Ожидает оплаты"
     PAID = "✅ Заявка принята"
@@ -459,45 +467,6 @@ class MaxxpharmBot:
             
             await message.answer(text)
         
-        @self.dp.message(F.text == "💳 Оплата")
-        async def handle_operator_payment(message: Message, state: FSMContext):
-            """Проверка оплаты оператором"""
-            if str(message.from_user.id) != ADMIN_ID:
-                await message.answer("❌ Доступ запрещен")
-                return
-            
-            await message.answer(
-                "💳 <b>Проверка оплаты</b>\n\n"
-                "📝 Введите номер заявки для проверки:"
-            )
-            await state.set_state("checking_payment")
-        
-        @self.dp.message(F.text == "✅ Принять")
-        async def handle_accept_order(message: Message, state: FSMContext):
-            """Принятие заявки оператором"""
-            if str(message.from_user.id) != ADMIN_ID:
-                await message.answer("❌ Доступ запрещен")
-                return
-            
-            await message.answer(
-                "✅ <b>Принятие заявки</b>\n\n"
-                "📝 Введите номер заявки:"
-            )
-            await state.set_state("accepting_order")
-        
-        @self.dp.message(F.text == "❌ Отказать")
-        async def handle_reject_order(message: Message, state: FSMContext):
-            """Отклонение заявки оператором"""
-            if str(message.from_user.id) != ADMIN_ID:
-                await message.answer("❌ Доступ запрещен")
-                return
-            
-            await message.answer(
-                "❌ <b>Отклонение заявки</b>\n\n"
-                "📝 Введите номер заявки и причину:"
-            )
-            await state.set_state("rejecting_order")
-        
         # 📊 Обработчики для администратора
         @self.dp.message(F.text == "📊 Все заявки")
         async def handle_all_orders(message: Message, state: FSMContext):
@@ -551,67 +520,6 @@ class MaxxpharmBot:
             )
             
             await message.answer("🎛 <b>Управление ролями</b>", reply_markup=keyboard)
-        
-        # 🔄 Обработка состояний для оператора
-        @self.dp.message()
-        async def handle_operator_states(message: Message, state: FSMContext):
-            """Обработка состояний оператора"""
-            current_state = await state.get_state()
-            
-            if current_state == "checking_payment":
-                order_id = message.text.strip()
-                if order_id in orders_db:
-                    order = orders_db[order_id]
-                    await message.answer(
-                        f"💳 <b>Заявка {order_id}</b>\n\n"
-                        f"👤 Клиент: {order.client_name}\n"
-                        f"📞 Телефон: {order.client_phone}\n"
-                        f"💰 Сумма: {order.total} сомони\n"
-                        f"📊 Статус: {order.status.value}\n\n"
-                        "✅ Подтвердите оплату или отклоните"
-                    )
-                else:
-                    await message.answer("❌ Заявка не найдена")
-                await state.clear()
-            
-            elif current_state == "accepting_order":
-                order_id = message.text.strip()
-                if order_id in orders_db:
-                    orders_db[order_id].status = OrderStatus.PAID
-                    await message.answer(f"✅ Заявка {order_id} принята к оплате")
-                else:
-                    await message.answer("❌ Заявка не найдена")
-                await state.clear()
-            
-            elif current_state == "rejecting_order":
-                parts = message.text.split(maxsplit=1)
-                if len(parts) >= 2:
-                    order_id = parts[0].strip()
-                    reason = parts[1]
-                    
-                    if order_id in orders_db:
-                        orders_db[order_id].status = OrderStatus.CREATED
-                        await message.answer(f"❌ Заявка {order_id} отклонена")
-                    else:
-                        await message.answer("❌ Заявка не найдена")
-                else:
-                    await message.answer("❌ Неверный формат. Используйте: номер_заявки причина")
-                await state.clear()
-        
-        # 🔄 Callback обработчики для ролей
-        @self.dp.callback_query(F.data.startswith("make_"))
-        async def handle_role_callback(callback: types.CallbackQuery, state: FSMContext):
-            """Обработка изменения ролей"""
-            if str(callback.from_user.id) != ADMIN_ID:
-                await callback.answer("❌ Доступ запрещен")
-                return
-            
-            role = callback.data.split("_")[1]
-            user_id = int(callback.message.text.split()[1]) if callback.message.text and len(callback.message.text.split()) > 1 else None
-            
-            if user_id and user_id in users_db:
-                users_db[user_id].role = role
-                await callback.answer(f"✅ Пользователю назначена роль: {role}")
         
         # 📞 Обработка неизвестных сообщений
         @self.dp.message()
